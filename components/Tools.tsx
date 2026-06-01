@@ -234,12 +234,19 @@ export function Tools() {
         </button>
       </section>
 
-      <button
-        onClick={() => supabase.auth.signOut()}
-        className="self-start text-sm text-ink-faint hover:text-ember-soft"
-      >
-        Sign out
-      </button>
+      {/* Account */}
+      <section className="rounded-xl border border-line bg-surface/70 p-4">
+        <h3 className="mb-3 font-medium">Account</h3>
+        <ChangePassword />
+        <div className="mt-3 border-t border-line pt-3">
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="text-sm text-ink-faint hover:text-ember-soft"
+          >
+            Sign out
+          </button>
+        </div>
+      </section>
 
       {/* New template builder */}
       {building && (
@@ -320,5 +327,77 @@ export function Tools() {
         />
       )}
     </div>
+  );
+}
+
+function ChangePassword() {
+  const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [status, setStatus] = useState<"idle" | "busy" | "done" | "error">("idle");
+  const [error, setError] = useState("");
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (password !== confirm) { setError("Passwords don't match."); return; }
+    if (password.length < 6) { setError("At least 6 characters."); return; }
+    setStatus("busy");
+    setError("");
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) {
+      setError(error.message);
+      setStatus("error");
+    } else {
+      setStatus("done");
+      setPassword("");
+      setConfirm("");
+      setTimeout(() => { setOpen(false); setStatus("idle"); }, 1500);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="text-sm text-ink-soft hover:text-ink">
+        Change password
+      </button>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-2">
+      <input
+        type="password"
+        required
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder="New password"
+        className="rounded-lg border border-line bg-night px-3 py-2 text-sm text-ink outline-none focus:border-ember"
+      />
+      <input
+        type="password"
+        required
+        value={confirm}
+        onChange={(e) => setConfirm(e.target.value)}
+        placeholder="Confirm password"
+        className="rounded-lg border border-line bg-night px-3 py-2 text-sm text-ink outline-none focus:border-ember"
+      />
+      {error && <p className="text-xs text-ember-soft">{error}</p>}
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={status === "busy"}
+          className="flex-1 rounded-lg bg-ember py-2 text-sm font-medium text-night hover:bg-ember-soft disabled:opacity-60"
+        >
+          {status === "busy" ? "Saving…" : status === "done" ? "Saved ✓" : "Save password"}
+        </button>
+        <button
+          type="button"
+          onClick={() => { setOpen(false); setError(""); setPassword(""); setConfirm(""); }}
+          className="rounded-lg border border-line px-3 py-2 text-sm text-ink-faint hover:text-ink"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
   );
 }
