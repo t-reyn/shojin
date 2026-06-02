@@ -109,6 +109,35 @@ Dark theme. Key tokens:
 - `mg-*` — muscle-group colours used by `ExerciseFigure` and `MuscleRadar`.
 - `heat-0..4` — heatmap intensity ramp.
 
+## File map — read only what you need
+
+| Task | Files to read |
+|------|---------------|
+| Add/change a type or data model | `lib/types.ts` |
+| Add a DB field | `lib/types.ts`, `supabase/schema.sql`, `lib/db.ts` |
+| Change a DB query | `lib/db.ts` |
+| Change store shape or actions | `lib/store.ts` |
+| Workout logging UI (sets, exercises, timer) | `components/WorkoutLogger.tsx`, `components/SetRow.tsx` |
+| Exercise picker | `components/ExercisePicker.tsx` |
+| Rest timer | `components/RestTimer.tsx`, `lib/store.ts` |
+| Start workout / template select flow | `components/StartModal.tsx`, `components/TemplateEditor.tsx` |
+| Template list/management | `components/Templates.tsx`, `components/TemplateEditor.tsx` |
+| Dashboard stats / streaks | `components/Dashboard.tsx`, `lib/stats.ts` |
+| Workout history list | `components/History.tsx` |
+| ORM progress chart | `components/Progress.tsx`, `lib/stats.ts`, `lib/oneRepMax.ts` |
+| Bodyweight chart | `components/BodyweightChart.tsx` |
+| Muscle radar chart | `components/MuscleRadar.tsx`, `lib/muscles.ts` |
+| Streak heatmap | `components/StreakHeatmap.tsx`, `lib/stats.ts` |
+| Tab bar / navigation | `components/AppShell.tsx`, `components/TabBar.tsx` |
+| Auth / login | `components/Login.tsx`, `components/AppGate.tsx`, `lib/supabase.ts` |
+| CSV export | `lib/csv.ts`, `components/Tools.tsx` |
+| Profile settings | `components/Tools.tsx`, `lib/db.ts` |
+| Global styles / colour tokens | `app/globals.css` |
+| ORM formulas | `lib/oneRepMax.ts` |
+| Muscle group labels / colours | `lib/muscles.ts` |
+| Exercise figure (stick figure) | `components/ExerciseFigure.tsx`, `lib/muscles.ts` |
+| PWA / app metadata | `app/manifest.ts`, `app/layout.tsx` |
+
 ### Conventions
 
 - `"use client"` on every component that uses state, effects, or browser APIs.
