@@ -91,6 +91,9 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
     try {
       await finish();
       onClose();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      window.alert(`Couldn't save workout — your sets are still here, nothing was lost.\n\n${msg}`);
     } finally {
       setSaving(false);
     }

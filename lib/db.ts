@@ -141,7 +141,11 @@ export async function saveWorkout(input: {
       unit: s.unit ?? "kg",
     }));
     const { error: e2 } = await supabase.from("workout_sets").insert(rows);
-    if (e2) throw e2;
+    if (e2) {
+      // Don't leave an orphan workout with no sets behind.
+      await supabase.from("workouts").delete().eq("id", workout_id);
+      throw e2;
+    }
   }
   return workout_id;
 }
@@ -163,10 +167,18 @@ export async function updateWorkout(
   sets: DraftSet[],
 ): Promise<void> {
   const user_id = await uid();
+  // Capture the existing set IDs so we can remove them only AFTER the new ones
+  // land — otherwise a failed insert would wipe the workout's history.
+  const { data: existing, error: e0 } = await supabase
+    .from("workout_sets")
+    .select("id")
+    .eq("workout_id", id);
+  if (e0) throw e0;
+  const oldIds = (existing ?? []).map((r) => (r as { id: string }).id);
+
   const { error: e1 } = await supabase.from("workouts").update({ name }).eq("id", id);
   if (e1) throw e1;
-  const { error: e2 } = await supabase.from("workout_sets").delete().eq("workout_id", id);
-  if (e2) throw e2;
+
   if (sets.length) {
     const rows = sets.map((s) => ({
       user_id,
@@ -181,7 +193,12 @@ export async function updateWorkout(
       unit: s.unit ?? "kg",
     }));
     const { error: e3 } = await supabase.from("workout_sets").insert(rows);
-    if (e3) throw e3;
+    if (e3) throw e3; // old sets are still intact — nothing lost
+  }
+
+  if (oldIds.length) {
+    const { error: e2 } = await supabase.from("workout_sets").delete().in("id", oldIds);
+    if (e2) throw e2;
   }
 }
 
