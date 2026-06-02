@@ -57,6 +57,7 @@ export interface WorkoutSet {
   rpe: number | null;
   is_warmup: boolean;
   completed: boolean;
+  unit?: Unit;
 }
 
 export interface Template {

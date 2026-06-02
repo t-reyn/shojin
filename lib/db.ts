@@ -72,6 +72,15 @@ export async function deleteCustomExercise(id: string): Promise<void> {
   if (error) throw error;
 }
 
+export async function deleteCustomExerciseAndSets(id: string): Promise<void> {
+  const { error: e1 } = await supabase.from("workout_sets").delete().eq("exercise_id", id);
+  if (e1) throw e1;
+  const { error: e2 } = await supabase.from("template_sets").delete().eq("exercise_id", id);
+  if (e2) throw e2;
+  const { error: e3 } = await supabase.from("exercises").delete().eq("id", id);
+  if (e3) throw e3;
+}
+
 export async function submitFeedback(
   message: string,
   customExercises: Pick<Exercise, "name" | "muscle_group" | "movement_pattern" | "equipment">[],
@@ -93,6 +102,7 @@ export interface DraftSet {
   reps: number;
   rpe?: number | null;
   is_warmup?: boolean;
+  unit?: string;
 }
 
 export async function saveWorkout(input: {
@@ -128,6 +138,7 @@ export async function saveWorkout(input: {
       rpe: s.rpe ?? null,
       is_warmup: s.is_warmup ?? false,
       completed: true,
+      unit: s.unit ?? "kg",
     }));
     const { error: e2 } = await supabase.from("workout_sets").insert(rows);
     if (e2) throw e2;
@@ -167,6 +178,7 @@ export async function updateWorkout(
       rpe: s.rpe ?? null,
       is_warmup: s.is_warmup ?? false,
       completed: true,
+      unit: s.unit ?? "kg",
     }));
     const { error: e3 } = await supabase.from("workout_sets").insert(rows);
     if (e3) throw e3;

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
+import { deleteWorkout } from "@/lib/db";
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short" });
@@ -18,6 +19,20 @@ export function History({ onStart }: { onStart: () => void }) {
   const startEdit = useStore((s) => s.startEdit);
   const startFromWorkout = useStore((s) => s.startFromWorkout);
   const draft = useStore((s) => s.draft);
+
+  const refreshWorkouts = useStore((s) => s.refreshWorkouts);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  async function removeWorkout(id: string, name: string) {
+    if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    setDeletingId(id);
+    try {
+      await deleteWorkout(id);
+      await refreshWorkouts();
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   const allWorkouts = useMemo(() => {
     return [...workouts]
@@ -96,6 +111,14 @@ export function History({ onStart }: { onStart: () => void }) {
                       className="rounded-lg bg-ember px-3 py-1.5 text-sm font-medium text-night hover:bg-ember-soft"
                     >
                       Repeat
+                    </button>
+                    <button
+                      onClick={() => removeWorkout(w.id, w.name)}
+                      disabled={deletingId === w.id}
+                      className="rounded-lg border border-line px-3 py-1.5 text-sm text-ink-faint hover:text-ember-soft disabled:opacity-40"
+                      title="Delete workout"
+                    >
+                      {deletingId === w.id ? "…" : "✕"}
                     </button>
                   </div>
                 </div>

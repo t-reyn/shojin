@@ -72,6 +72,8 @@ create table if not exists workout_sets (
 );
 create index if not exists workout_sets_workout on workout_sets (workout_id);
 create index if not exists workout_sets_user_ex on workout_sets (user_id, exercise_id);
+-- Added for per-exercise unit support; run separately on existing DBs:
+-- alter table workout_sets add column if not exists unit text not null default 'kg' check (unit in ('kg','lb'));
 
 -- ---------------------------------------------------------------------------
 -- templates + template_sets (planned targets)

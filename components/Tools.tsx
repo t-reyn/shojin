@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import {
   createCustomExercise,
   deleteCustomExercise,
+  deleteCustomExerciseAndSets,
   deleteTemplate,
   saveTemplate,
   submitFeedback,
@@ -34,6 +35,7 @@ export function Tools() {
   const exerciseById = useStore((s) => s.exerciseById);
   const refreshTemplates = useStore((s) => s.refreshTemplates);
   const refreshExercises = useStore((s) => s.refreshExercises);
+  const refreshWorkouts = useStore((s) => s.refreshWorkouts);
 
   const unit = profile?.unit ?? "kg";
   const rest = profile?.default_rest_seconds ?? 90;
@@ -79,6 +81,11 @@ export function Tools() {
     return customExercises.filter((e) => usedIds.has(e.id));
   }, [customExercises, workouts]);
 
+  const usedCustomIds = useMemo(
+    () => new Set(customExercisesUsed.map((e) => e.id)),
+    [customExercisesUsed],
+  );
+
   async function saveCustomExercise() {
     if (!customName.trim()) return;
     setSavingCustom(true);
@@ -98,12 +105,22 @@ export function Tools() {
   }
 
   async function removeCustomExercise(id: string) {
+    const isUsed = usedCustomIds.has(id);
+    const confirmed = window.confirm(
+      isUsed
+        ? "This exercise has been logged in workouts. Deleting it will remove those sets from your history. Continue?"
+        : "Delete this custom exercise?",
+    );
+    if (!confirmed) return;
     setDeletingCustom(id);
     try {
-      await deleteCustomExercise(id);
+      if (isUsed) {
+        await deleteCustomExerciseAndSets(id);
+        await refreshWorkouts();
+      } else {
+        await deleteCustomExercise(id);
+      }
       await refreshExercises();
-    } catch {
-      // silently ignore FK violations (exercise used in saved workouts)
     } finally {
       setDeletingCustom(null);
     }

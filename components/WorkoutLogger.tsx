@@ -6,6 +6,7 @@ import { saveTemplate } from "@/lib/db";
 import { MUSCLE_COLORS } from "@/lib/muscles";
 import { ExerciseFigure } from "./ExerciseFigure";
 import { ExercisePicker } from "./ExercisePicker";
+import { RestTimer } from "./RestTimer";
 import { SetRow } from "./SetRow";
 
 export function WorkoutLogger({ onClose }: { onClose: () => void }) {
@@ -15,6 +16,7 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
   const replaceExercise = useStore((s) => s.replaceDraftExercise);
   const removeExercise = useStore((s) => s.removeDraftExercise);
   const addSet = useStore((s) => s.addDraftSet);
+  const toggleUnit = useStore((s) => s.toggleDraftExerciseUnit);
   const discard = useStore((s) => s.discardDraft);
   const finish = useStore((s) => s.finishWorkout);
   const exerciseById = useStore((s) => s.exerciseById);
@@ -122,6 +124,13 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
                     {meta?.name ?? "Exercise"}
                   </button>
                   <button
+                    onClick={() => toggleUnit(exIdx)}
+                    className="rounded border border-line px-1.5 py-0.5 text-xs text-ink-soft hover:text-ink"
+                    title="Toggle kg / lb"
+                  >
+                    {ex.unit}
+                  </button>
+                  <button
                     onClick={() => removeExercise(exIdx)}
                     className="text-ink-faint hover:text-ember-soft"
                     title="Remove exercise"
@@ -131,7 +140,7 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
                 </div>
 
                 {ex.sets.map((set, setIdx) => (
-                  <SetRow key={setIdx} exIdx={exIdx} setIdx={setIdx} set={set} unit={unit} />
+                  <SetRow key={setIdx} exIdx={exIdx} setIdx={setIdx} set={set} unit={ex.unit ?? unit} />
                 ))}
 
                 <button
@@ -152,6 +161,8 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
           </button>
         </div>
       </div>
+
+      <RestTimer />
 
       {/* Bottom action bar */}
       <div className="shrink-0 border-t border-line p-4">
