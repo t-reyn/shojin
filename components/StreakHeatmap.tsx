@@ -17,10 +17,10 @@ export function StreakHeatmap() {
   const { weeks } = useMemo(() => buildHeatmap(workouts, 26), [workouts]);
 
   return (
-    <div className="overflow-x-auto">
-      <div className="flex gap-1">
+    <div>
+      <div className="flex w-full gap-0.5">
         {weeks.map((col, i) => (
-          <div key={i} className="flex flex-col gap-1">
+          <div key={i} className="flex flex-1 flex-col gap-0.5">
             {col.map((cell) => (
               <div
                 key={cell.date}
@@ -29,11 +29,10 @@ export function StreakHeatmap() {
                     ? `${cell.date}: ${cell.count} workout(s), ${Math.round(cell.volume)} volume`
                     : `${cell.date}: rest`
                 }
-                className="h-3 w-3 rounded-[3px]"
+                className="w-full rounded-[2px]"
                 style={{
-                  backgroundColor: cell.inFuture
-                    ? "transparent"
-                    : LEVEL_VAR[cell.level],
+                  aspectRatio: "1 / 1",
+                  backgroundColor: cell.inFuture ? "transparent" : LEVEL_VAR[cell.level],
                   opacity: cell.inFuture ? 0.15 : 1,
                 }}
               />
@@ -46,7 +45,7 @@ export function StreakHeatmap() {
         {([0, 1, 2, 3, 4] as const).map((l) => (
           <span
             key={l}
-            className="h-3 w-3 rounded-[3px]"
+            className="inline-block h-3 w-3 rounded-[2px]"
             style={{ backgroundColor: LEVEL_VAR[l] }}
           />
         ))}
