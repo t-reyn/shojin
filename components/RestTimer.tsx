@@ -66,31 +66,38 @@ export function RestTimer() {
     <div className="sticky bottom-3 z-30 mx-auto w-full max-w-3xl px-1">
       <div
         className={[
-          "flex items-center gap-3 rounded-xl border border-ember/50 bg-surface-2/95 p-3 shadow-lg backdrop-blur",
+          "overflow-hidden rounded-xl border border-ember/50 bg-surface-2/95 shadow-lg backdrop-blur",
           done ? "timer-done" : "",
         ].join(" ")}
       >
-        <div className="font-mono text-2xl tabular-nums text-ember">
-          {done ? "Rest done" : `${mm}:${ss}`}
+        <div className="flex items-center gap-3 px-3 py-3">
+          <div className="font-mono text-2xl tabular-nums text-ember">
+            {done ? "Rest done" : `${mm}:${ss}`}
+          </div>
+          <div className="flex-1" />
+          <button
+            onClick={() => startRest(remaining + 15)}
+            className="rounded-md border border-line px-2 py-1 text-sm text-ink-soft hover:text-ink"
+          >
+            +15s
+          </button>
+          <button
+            onClick={stopRest}
+            className="rounded-md bg-ember px-3 py-1 text-sm font-medium text-night"
+          >
+            Skip
+          </button>
         </div>
-        <div className="h-2 flex-1 overflow-hidden rounded-full bg-line">
+        {/* Countdown bar — spans full card width, sits flush at bottom */}
+        <div className="h-2 w-full bg-line">
           <div
-            className="h-full bg-ember transition-[width] duration-200"
-            style={{ width: `${done ? 0 : pct}%` }}
+            className="h-full transition-[width] duration-200"
+            style={{
+              width: `${done ? 0 : pct}%`,
+              backgroundColor: pct > 40 ? "var(--color-ember)" : pct > 15 ? "#f59e0b" : "#ef4444",
+            }}
           />
         </div>
-        <button
-          onClick={() => startRest(remaining + 15)}
-          className="rounded-md border border-line px-2 py-1 text-sm text-ink-soft hover:text-ink"
-        >
-          +15s
-        </button>
-        <button
-          onClick={stopRest}
-          className="rounded-md bg-ember px-3 py-1 text-sm font-medium text-night"
-        >
-          Skip
-        </button>
       </div>
     </div>
   );
