@@ -23,6 +23,12 @@ npm run lint                  # eslint (flat config, eslint.config.mjs)
 
 No test suite — verify changes via the running dev server on port 3200.
 
+## Deploy
+
+Auto-deploys to Vercel on every push to `master` (GitHub repo: `t-reyn/ironlog`). Production URL: `https://ironlog-psi-two.vercel.app`. Branch pushes get preview URLs.
+
+Supabase schema changes and auth config are applied via the Management API (project ref `drcxxxunbrqlbqwcolay`) using the access token in `.env.local`. Never commit `.env.local`.
+
 ## Architecture
 
 ### Data flow
@@ -36,49 +42,77 @@ Supabase (Postgres + Auth)
          ↕ components/* (read store selectors, call store actions)
 ```
 
-The **active workout draft** (in-progress logging session) is also held in the store (`draft` field) so it survives tab switches. The **rest timer** (`rest.endsAt`, `rest.duration`) lives in the store for the same reason; `RestTimer.tsx` ticks locally via `setInterval`.
+The **active workout draft** (`store.draft`) survives tab switches because it lives in the store. The **rest timer** (`store.rest`) lives there for the same reason.
 
 ### Auth gate
 
-`app/page.tsx` (server) → `AppGate` (client) → checks `hasSupabase` flag → if no env vars shows `SetupNotice`; otherwise resolves the Supabase session and renders `Login` or `AppShell`.
+`app/page.tsx` (server) → `AppGate` (client) → checks `hasSupabase` flag → shows `SetupNotice`, `Login`, or `AppShell`.
 
-`hasSupabase` is false when `NEXT_PUBLIC_SUPABASE_URL` contains `"YOUR-PROJECT"` or is absent. The app builds fine without env vars (placeholders prevent prerender crashes); runtime queries fail with a clear notice.
+Auth is **email + password** via `supabase.auth.signInWithPassword` / `signUp`. `hasSupabase` is false when `NEXT_PUBLIC_SUPABASE_URL` is absent or contains `"YOUR-PROJECT"` — the app builds and renders fine without env vars (placeholders prevent prerender crashes).
 
-### Tabs
+### Navigation & overlays
 
-`AppShell` owns the active tab and renders one of five panels: `Dashboard`, `WorkoutLogger`, `Templates`, `Progress`, `Tools`. `TabBar` is generic (takes a `TabDef<T>[]` array) and follows the accessible `role="tablist"` / `aria-selected` pattern with arrow-key navigation.
+`AppShell` owns 4 tabs: **Dashboard**, **Log**, **Progress**, **Tools**.
+
+- **Log tab** always renders `<History />` (workout history list). It never renders the logger directly.
+- **WorkoutLogger** is a `fixed inset-0 z-50` full-screen overlay rendered by `AppShell` when `showLogger && draft`. It receives `onClose` and calls it after finish or discard.
+- **StartModal** is a `fixed inset-0 z-40` bottom-sheet overlay with three options: Empty / Repeat previous / Use a template. It also contains the full template builder and `TemplateEditor`. Opened by the persistent "Start workout" / "Continue workout →" button above the tab bar.
+
+The button above tabs is the single entry point for all workout starts. When `draft` is set, it reads "Continue workout →" and opens the logger overlay directly.
 
 ### Database (Supabase)
 
-Schema is in `supabase/schema.sql` — run it once in the Supabase SQL editor to create tables, enums, RLS policies, and seed exercises. Key design points:
+Schema is in `supabase/schema.sql`. Key design:
 
-- Built-in exercises have `user_id = null`; RLS allows all authenticated users to read them.
-- Every other table is owner-only (`user_id = auth.uid()`).
+- Built-in exercises have `user_id = null`; RLS lets all authenticated users read them.
+- All other tables are owner-only (`user_id = auth.uid()`).
 - A trigger auto-creates a `profiles` row on signup.
-- `workout_sets` and `template_sets` are deleted by cascade when the parent workout/template is deleted.
+- `workout_sets` and `template_sets` cascade-delete with their parent.
 
-To add a new field: extend `lib/types.ts`, add the column to `supabase/schema.sql`, update the relevant `lib/db.ts` query, update the store if needed, then update components.
+To add a field: extend `lib/types.ts` → add column to `supabase/schema.sql` → update `lib/db.ts` query → update store if needed → update components.
+
+To run SQL against the live DB from dev:
+```bash
+curl -X POST "https://api.supabase.com/v1/projects/drcxxxunbrqlbqwcolay/database/query" \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"SELECT ..."}'
+```
+
+### Store shape
+
+```ts
+draft: Draft | null          // active workout session; null = no workout in progress
+  Draft.workoutId?           // present only when editing a saved workout (not a new one)
+loaded: boolean              // false until hydrate() resolves
+exercises / workouts /
+  templates / bodyweight /
+  profile                    // server data; refresh via store.refreshX() after mutations
+rest: { endsAt, duration }   // rest timer state
+```
+
+Store mutations spread — no immer. `useStore.setState(fn)` is used outside components (e.g. `Tools.tsx` after `updateProfile`).
 
 ### Key libraries
 
-- **`recharts@3`** — `LineChart` in `Progress.tsx` and `BodyweightChart.tsx`; `RadarChart` in `MuscleRadar.tsx`. All chart components are `"use client"` and wrapped in `ResponsiveContainer`.
-- **`zustand@5`** — store created with plain `create` (no `persist`, no `immer`). Mutate by spreading: `set({ draft: { ...draft, name } })`.
-- **`papaparse`** — CSV export only (`lib/csv.ts`). No CSV import in this app.
+- **`recharts@3`** — `LineChart` in `Progress.tsx` / `BodyweightChart.tsx`; `RadarChart` in `MuscleRadar.tsx`. All chart components are `"use client"` and wrapped in `ResponsiveContainer`.
+- **`zustand@5`** — plain `create` (no persist, no immer).
+- **`papaparse`** — CSV export only (`lib/csv.ts`).
 
 ### Palette (Tailwind v4 `@theme` in `app/globals.css`)
 
 Dark theme. Key tokens:
-- `ember` / `ember-soft` — primary accent (active tab, buttons, charts, streak heatmap).
-- `night` — darkest background; also used as text colour on ember buttons.
-- `surface` / `surface-2` / `line` — card backgrounds and borders.
+- `ember` / `ember-soft` — primary accent (buttons, active tab, charts).
+- `night` (#0f1115) — darkest background; text colour on ember buttons.
+- `surface` / `line` — card backgrounds and borders.
 - `ink` / `ink-soft` / `ink-faint` — text hierarchy.
-- `mg-*` colours (`mg-chest`, `mg-back`, etc.) — muscle-group accents used by `ExerciseFigure` and `MuscleRadar`.
-- `heat-0..4` — heatmap intensity ramp (heat-0 = empty, heat-4 = max volume).
+- `mg-*` — muscle-group colours used by `ExerciseFigure` and `MuscleRadar`.
+- `heat-0..4` — heatmap intensity ramp.
 
 ### Conventions
 
 - `"use client"` on every component that uses state, effects, or browser APIs.
 - Path alias `@/*` resolves to the project root (`tsconfig.json`).
 - No comments inside functions unless capturing non-obvious behaviour.
-- Selectors: always select the raw array from the store (`useStore(s => s.workouts)`) and filter with `useMemo` in the component — never filter inside the selector (new array reference per render trips React 19's snapshot check).
-- `useStore.setState(fn)` is acceptable for patching store state from outside a component (e.g. in `Tools.tsx` after `updateProfile`).
+- Always select the raw array from the store (`useStore(s => s.workouts)`) and filter/sort with `useMemo` in the component — never filter inside the selector (new array reference every render trips React 19's snapshot check).
+- TypeScript closure narrowing does not apply inside function bodies — add an explicit `if (!draft) return` inside any function that uses `draft` even when the outer scope has already narrowed it.
