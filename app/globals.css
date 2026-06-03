@@ -9,7 +9,7 @@
   --color-line: #2b313d;
   --color-ink: #e7ecf3;
   --color-ink-soft: #9aa5b5;
-  --color-ink-faint: #5c6675;
+  --color-ink-faint: #7a8597;
 
   --color-iron: #6b7280;
   --color-steel: #93a4bf;
@@ -17,6 +17,9 @@
   --color-ember-soft: #fb923c;
   --color-mint: #34d399;
   --color-violet: #a78bfa;
+  /* Destructive actions — distinct from the ember brand accent. */
+  --color-danger: #f0556d;
+  --color-danger-soft: #f87a8c;
 
   /* Muscle-group accents — reused by radar + figure highlights */
   --color-mg-chest: #f97316;

@@ -68,7 +68,7 @@ export function ExercisePicker({
             placeholder="Search exercises…"
             className="flex-1 rounded-lg border border-line bg-night px-3 py-2 text-ink outline-none focus:border-ember"
           />
-          <button onClick={onClose} className="px-2 text-ink-faint hover:text-ink">
+          <button onClick={onClose} aria-label="Close" className="px-2 text-ink-faint hover:text-ink">
             ✕
           </button>
         </div>

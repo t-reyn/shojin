@@ -27,7 +27,7 @@ function beep() {
   }
 }
 
-export function RestTimer() {
+export function RestTimer({ bottomOffset }: { bottomOffset?: string } = {}) {
   const rest = useStore((s) => s.rest);
   const startRest = useStore((s) => s.startRest);
   const stopRest = useStore((s) => s.stopRest);
@@ -63,7 +63,10 @@ export function RestTimer() {
   const ss = String(remaining % 60).padStart(2, "0");
 
   return (
-    <div className="sticky bottom-3 z-30 mx-auto w-full max-w-3xl px-1">
+    <div
+      className="fixed inset-x-0 z-[60] mx-auto w-full max-w-3xl px-3"
+      style={{ bottom: bottomOffset ?? "calc(env(safe-area-inset-bottom) + 8.5rem)" }}
+    >
       <div
         className={[
           "flex items-center gap-3 rounded-xl border border-ember/50 bg-surface-2/95 p-3 shadow-lg backdrop-blur",

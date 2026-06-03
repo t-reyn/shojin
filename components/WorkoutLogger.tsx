@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { saveTemplate } from "@/lib/db";
 import { MUSCLE_COLORS } from "@/lib/muscles";
+import { confirmDialog, promptDialog } from "@/lib/dialog";
+import { toast } from "@/lib/toast";
 import { ExerciseFigure } from "./ExerciseFigure";
 import { ExercisePicker } from "./ExercisePicker";
 import { SetRow } from "./SetRow";
@@ -14,6 +16,7 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
   const addExercise = useStore((s) => s.addDraftExercise);
   const replaceExercise = useStore((s) => s.replaceDraftExercise);
   const removeExercise = useStore((s) => s.removeDraftExercise);
+  const insertExercise = useStore((s) => s.insertDraftExercise);
   const addSet = useStore((s) => s.addDraftSet);
   const discard = useStore((s) => s.discardDraft);
   const finish = useStore((s) => s.finishWorkout);
@@ -36,7 +39,12 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
 
   async function saveAsTemplate() {
     if (!draft) return;
-    const name = window.prompt("Template name", draft.name);
+    const name = await promptDialog({
+      title: "Save as template",
+      placeholder: "Template name",
+      defaultValue: draft.name,
+      confirmLabel: "Save template",
+    });
     if (!name) return;
     const sets = draft.exercises.flatMap((ex) =>
       ex.sets.map((s, idx) => ({
@@ -50,24 +58,38 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
     try {
       await saveTemplate({ name, sets });
       await refreshTemplates();
-      window.alert("Saved as template.");
+      toast.success(`Saved “${name}” as a template.`);
+    } catch {
+      toast.error("Couldn't save template. Try again.");
     } finally {
       setSaving(false);
     }
+  }
+
+  function removeExerciseWithUndo(exIdx: number) {
+    if (!draft) return;
+    const meta = exerciseById(draft.exercises[exIdx].exerciseId);
+    const snapshot = draft.exercises[exIdx];
+    removeExercise(exIdx);
+    toast.show(`Removed ${meta?.name ?? "exercise"}.`, {
+      action: { label: "Undo", onClick: () => insertExercise(exIdx, snapshot) },
+    });
   }
 
   async function onFinish() {
     if (!draft) return;
     const isEdit = !!draft.workoutId;
     if (completedSets === 0) {
-      if (
-        !window.confirm(
-          isEdit
-            ? "No sets marked complete. Discard changes?"
-            : "No sets marked complete. Discard this workout?",
-        )
-      )
-        return;
+      const ok = await confirmDialog({
+        title: "Nothing logged yet",
+        message: isEdit
+          ? "No sets are marked complete. Discard your changes?"
+          : "No sets are marked complete. Discard this workout?",
+        confirmLabel: "Discard",
+        cancelLabel: "Keep editing",
+        danger: true,
+      });
+      if (!ok) return;
       discard();
       onClose();
       return;
@@ -75,10 +97,29 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
     setSaving(true);
     try {
       await finish();
+      toast.success(isEdit ? "Workout updated." : "Workout saved.");
       onClose();
+    } catch {
+      toast.error("Couldn't save workout. Try again.");
     } finally {
       setSaving(false);
     }
+  }
+
+  async function onDiscard() {
+    if (!draft) return;
+    const ok = await confirmDialog({
+      title: draft.workoutId ? "Discard changes?" : "Discard workout?",
+      message: draft.workoutId
+        ? "Your edits to this workout won't be saved."
+        : "This workout won't be saved.",
+      confirmLabel: "Discard",
+      cancelLabel: "Keep editing",
+      danger: true,
+    });
+    if (!ok) return;
+    discard();
+    onClose();
   }
 
   return (
@@ -87,14 +128,15 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
       <div className="flex shrink-0 items-center gap-3 border-b border-line px-4 py-3">
         <button
           onClick={onClose}
-          className="shrink-0 text-lg text-ink-soft hover:text-ink"
-          title="Back"
+          aria-label="Close workout"
+          className="-ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl text-ink-soft hover:bg-surface-2 hover:text-ink"
         >
           ←
         </button>
         <input
           value={draft.name}
           onChange={(e) => setName(e.target.value)}
+          aria-label="Workout name"
           className="flex-1 bg-transparent text-lg font-medium text-ink outline-none"
           placeholder="Workout name"
         />
@@ -122,12 +164,22 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
                     {meta?.name ?? "Exercise"}
                   </button>
                   <button
-                    onClick={() => removeExercise(exIdx)}
-                    className="text-ink-faint hover:text-ember-soft"
-                    title="Remove exercise"
+                    onClick={() => removeExerciseWithUndo(exIdx)}
+                    aria-label={`Remove ${meta?.name ?? "exercise"}`}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint hover:bg-surface-2 hover:text-danger-soft"
                   >
                     ✕
                   </button>
+                </div>
+
+                <div className="mb-1 flex items-center gap-2 text-[10px] font-medium uppercase tracking-wide text-ink-faint">
+                  <span className="w-6 text-center">#</span>
+                  <span className="w-12 text-center">Type</span>
+                  <span className="flex-1 text-center">Weight ({unit})</span>
+                  <span className="flex-1 text-center">Reps</span>
+                  <span className="w-12 text-right">1RM</span>
+                  <span className="w-9 shrink-0" aria-hidden="true" />
+                  <span className="w-7 shrink-0" aria-hidden="true" />
                 </div>
 
                 {ex.sets.map((set, setIdx) => (
@@ -154,7 +206,7 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* Bottom action bar */}
-      <div className="shrink-0 border-t border-line p-4">
+      <div className="shrink-0 border-t border-line p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto flex max-w-3xl gap-2">
           <button
             onClick={onFinish}
@@ -177,13 +229,8 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
             </button>
           )}
           <button
-            onClick={() => {
-              if (window.confirm(draft.workoutId ? "Discard changes?" : "Discard this workout?")) {
-                discard();
-                onClose();
-              }
-            }}
-            className="rounded-lg border border-line px-3 py-2.5 text-sm text-ink-faint hover:text-ember-soft"
+            onClick={onDiscard}
+            className="rounded-lg border border-line px-3 py-2.5 text-sm text-ink-faint hover:border-danger/50 hover:text-danger-soft"
           >
             Discard
           </button>

@@ -10,14 +10,17 @@ import { Progress } from "./Progress";
 import { Tools } from "./Tools";
 import { RestTimer } from "./RestTimer";
 import { StartModal } from "./StartModal";
+import { Toaster } from "./Toaster";
+import { DialogHost } from "./DialogHost";
+import { DashboardIcon, LogIcon, ProgressIcon, ToolsIcon } from "./TabIcons";
 
 type TabId = "dashboard" | "log" | "progress" | "tools";
 
 const TABS: TabDef<TabId>[] = [
-  { id: "dashboard", label: "Dashboard" },
-  { id: "log", label: "Log" },
-  { id: "progress", label: "Progress" },
-  { id: "tools", label: "Tools" },
+  { id: "dashboard", label: "Dashboard", icon: <DashboardIcon /> },
+  { id: "log", label: "Log", icon: <LogIcon /> },
+  { id: "progress", label: "Progress", icon: <ProgressIcon /> },
+  { id: "tools", label: "Tools", icon: <ToolsIcon /> },
 ];
 
 export function AppShell({ userEmail }: { userEmail: string }) {
@@ -38,43 +41,59 @@ export function AppShell({ userEmail }: { userEmail: string }) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 p-4 sm:p-6">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">
-          Iron<span className="text-ember">Log</span>
-        </h1>
-        <span className="hidden text-xs text-ink-faint sm:block">{userEmail}</span>
-      </header>
+    <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-3xl flex-col">
+      <div className="flex flex-1 flex-col gap-4 p-4 pb-36 sm:p-6 sm:pb-36">
+        <header className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-tight">
+            Iron<span className="text-ember">Log</span>
+          </h1>
+          <span className="hidden text-xs text-ink-faint sm:block">{userEmail}</span>
+        </header>
 
-      <button
-        onClick={draft ? openLogger : () => setShowStart(true)}
-        className="rounded-xl bg-ember py-3 text-center font-semibold text-night hover:bg-ember-soft"
-      >
-        {draft ? "Continue workout →" : "Start workout"}
-      </button>
+        {error && (
+          <div className="rounded-lg border border-danger/40 bg-danger/10 p-3 text-sm text-danger-soft">
+            {error}
+          </div>
+        )}
 
-      <TabBar tabs={TABS} active={active} onChange={setActive} />
+        {!loaded ? (
+          <div className="flex flex-1 items-center justify-center text-ink-soft">
+            Loading your data…
+          </div>
+        ) : (
+          <main className="flex-1">
+            {active === "dashboard" && <Dashboard onStart={() => setShowStart(true)} />}
+            {active === "log" && (
+              <History onStart={openLogger} onNew={() => setShowStart(true)} />
+            )}
+            {active === "progress" && <Progress />}
+            {active === "tools" && <Tools />}
+          </main>
+        )}
+      </div>
 
-      {error && (
-        <div className="rounded-lg border border-ember/40 bg-ember/10 p-3 text-sm text-ember-soft">
-          {error}
+      <RestTimer
+        bottomOffset={
+          showLogger
+            ? "calc(env(safe-area-inset-bottom) + 4.75rem)"
+            : "calc(env(safe-area-inset-bottom) + 8.5rem)"
+        }
+      />
+      <Toaster />
+      <DialogHost />
+
+      {/* Persistent bottom bar: primary action + section nav (thumb reach) */}
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-night/95 backdrop-blur">
+        <div className="mx-auto w-full max-w-3xl px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <button
+            onClick={draft ? openLogger : () => setShowStart(true)}
+            className="mb-2 w-full rounded-xl bg-ember py-3 text-center font-semibold text-night hover:bg-ember-soft"
+          >
+            {draft ? "Continue workout →" : "Start workout"}
+          </button>
+          <TabBar tabs={TABS} active={active} onChange={setActive} />
         </div>
-      )}
-
-      {!loaded ? (
-        <div className="flex flex-1 items-center justify-center text-ink-soft">
-          Loading your data…
-        </div>
-      ) : (
-        <main className="flex-1">
-          {active === "dashboard" && <Dashboard />}
-          {active === "log" && <History onStart={openLogger} />}
-          {active === "progress" && <Progress />}
-          {active === "tools" && <Tools />}
-        </main>
-      )}
-
-      <RestTimer />
+      </nav>
 
       {showStart && (
         <StartModal

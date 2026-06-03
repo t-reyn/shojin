@@ -63,9 +63,11 @@ interface StoreState {
   addDraftExercise: (exerciseId: string) => void;
   replaceDraftExercise: (exIdx: number, exerciseId: string) => void;
   removeDraftExercise: (exIdx: number) => void;
+  insertDraftExercise: (exIdx: number, exercise: DraftExercise) => void;
   addDraftSet: (exIdx: number) => void;
   updateDraftSet: (exIdx: number, setIdx: number, patch: Partial<DraftSetEntry>) => void;
   removeDraftSet: (exIdx: number, setIdx: number) => void;
+  insertDraftSet: (exIdx: number, setIdx: number, set: DraftSetEntry) => void;
   discardDraft: () => void;
   finishWorkout: () => Promise<void>;
 
@@ -241,6 +243,14 @@ export const useStore = create<StoreState>((set, get) => ({
     });
   },
 
+  insertDraftExercise: (exIdx, exercise) => {
+    const draft = get().draft;
+    if (!draft) return;
+    const exercises = [...draft.exercises];
+    exercises.splice(exIdx, 0, exercise);
+    set({ draft: { ...draft, exercises } });
+  },
+
   addDraftSet: (exIdx) => {
     const draft = get().draft;
     if (!draft) return;
@@ -282,6 +292,18 @@ export const useStore = create<StoreState>((set, get) => ({
     const exercises = draft.exercises.map((ex, i) => {
       if (i !== exIdx) return ex;
       return { ...ex, sets: ex.sets.filter((_, j) => j !== setIdx) };
+    });
+    set({ draft: { ...draft, exercises } });
+  },
+
+  insertDraftSet: (exIdx, setIdx, setEntry) => {
+    const draft = get().draft;
+    if (!draft) return;
+    const exercises = draft.exercises.map((ex, i) => {
+      if (i !== exIdx) return ex;
+      const sets = [...ex.sets];
+      sets.splice(setIdx, 0, setEntry);
+      return { ...ex, sets };
     });
     set({ draft: { ...draft, exercises } });
   },

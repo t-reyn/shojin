@@ -2,6 +2,7 @@
 
 import { useStore, type DraftSetEntry } from "@/lib/store";
 import { blendedOneRepMax, round1 } from "@/lib/oneRepMax";
+import { toast } from "@/lib/toast";
 import type { Unit } from "@/lib/types";
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
 export function SetRow({ exIdx, setIdx, set, unit }: Props) {
   const update = useStore((s) => s.updateDraftSet);
   const remove = useStore((s) => s.removeDraftSet);
+  const insert = useStore((s) => s.insertDraftSet);
   const startRest = useStore((s) => s.startRest);
   const restDuration = useStore((s) => s.rest.duration);
 
@@ -25,71 +27,81 @@ export function SetRow({ exIdx, setIdx, set, unit }: Props) {
     if (next && !set.isWarmup) startRest(restDuration);
   }
 
+  function removeWithUndo() {
+    const snapshot = set;
+    remove(exIdx, setIdx);
+    toast.show(`Removed set ${setIdx + 1}.`, {
+      action: { label: "Undo", onClick: () => insert(exIdx, setIdx, snapshot) },
+    });
+  }
+
   return (
-    <div className="flex items-center gap-2 py-1">
-      <span className="w-6 text-center text-xs text-ink-faint">{setIdx + 1}</span>
+    <div
+      className={[
+        "flex items-center gap-2 rounded-lg py-1 transition-colors",
+        set.done ? "bg-mint/10" : "",
+      ].join(" ")}
+    >
+      <span className="w-6 text-center text-xs font-medium text-ink-faint">{setIdx + 1}</span>
 
       <button
         onClick={() => update(exIdx, setIdx, { isWarmup: !set.isWarmup })}
-        title="Toggle warmup set"
+        aria-pressed={set.isWarmup}
+        title="Mark as warm-up set"
         className={[
-          "rounded px-1.5 py-0.5 text-[10px] font-medium uppercase",
+          "w-12 shrink-0 rounded-md py-2 text-[10px] font-semibold uppercase tracking-wide transition-colors",
           set.isWarmup
-            ? "bg-steel/20 text-steel"
-            : "bg-surface text-ink-faint hover:text-ink-soft",
+            ? "bg-steel/25 text-steel"
+            : "bg-surface-2 text-ink-faint hover:text-ink-soft",
         ].join(" ")}
       >
-        {set.isWarmup ? "Warm" : "Work"}
+        Warm
       </button>
 
-      <label className="flex items-center gap-1">
-        <input
-          type="number"
-          inputMode="decimal"
-          value={set.weight || ""}
-          onChange={(e) =>
-            update(exIdx, setIdx, { weight: parseFloat(e.target.value) || 0 })
-          }
-          className="w-16 rounded-md border border-line bg-surface px-2 py-1 text-right text-ink outline-none focus:border-ember"
-          placeholder="0"
-        />
-        <span className="text-xs text-ink-faint">{unit}</span>
-      </label>
-
-      <span className="text-ink-faint">×</span>
+      <input
+        type="number"
+        inputMode="decimal"
+        aria-label={`Set ${setIdx + 1} weight in ${unit}`}
+        value={set.weight || ""}
+        onChange={(e) => update(exIdx, setIdx, { weight: parseFloat(e.target.value) || 0 })}
+        className="w-full min-w-0 flex-1 rounded-md border border-line bg-surface px-2 py-2 text-center text-ink outline-none focus:border-ember"
+        placeholder="0"
+      />
 
       <input
         type="number"
         inputMode="numeric"
+        aria-label={`Set ${setIdx + 1} reps`}
         value={set.reps || ""}
-        onChange={(e) =>
-          update(exIdx, setIdx, { reps: parseInt(e.target.value) || 0 })
-        }
-        className="w-14 rounded-md border border-line bg-surface px-2 py-1 text-right text-ink outline-none focus:border-ember"
+        onChange={(e) => update(exIdx, setIdx, { reps: parseInt(e.target.value) || 0 })}
+        className="w-full min-w-0 flex-1 rounded-md border border-line bg-surface px-2 py-2 text-center text-ink outline-none focus:border-ember"
         placeholder="0"
       />
-      <span className="text-xs text-ink-faint">reps</span>
 
-      <span className="ml-auto w-20 text-right text-xs text-ink-soft">
-        {orm > 0 ? `1RM ${orm}` : ""}
+      <span className="w-12 text-right text-xs tabular-nums text-ink-soft" title="Estimated 1-rep max">
+        {orm > 0 ? orm : "—"}
       </span>
 
       <button
         onClick={toggleDone}
+        aria-pressed={set.done}
+        aria-label={set.done ? `Set ${setIdx + 1} completed` : `Mark set ${setIdx + 1} complete`}
         title="Mark set complete (starts rest timer)"
         className={[
-          "rounded-md px-2 py-1 text-sm transition",
+          "flex h-10 w-9 shrink-0 items-center justify-center rounded-md text-base font-semibold transition-colors",
           set.done
             ? "bg-mint/20 text-mint"
-            : "border border-line text-ink-faint hover:text-ink",
+            : "border border-line text-ink-faint hover:border-mint/50 hover:text-mint",
         ].join(" ")}
       >
         ✓
       </button>
+
       <button
-        onClick={() => remove(exIdx, setIdx)}
+        onClick={removeWithUndo}
+        aria-label={`Remove set ${setIdx + 1}`}
         title="Remove set"
-        className="text-ink-faint hover:text-ember-soft"
+        className="flex h-10 w-7 shrink-0 items-center justify-center rounded-md text-ink-faint hover:text-danger-soft"
       >
         ✕
       </button>

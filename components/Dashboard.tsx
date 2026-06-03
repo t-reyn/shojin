@@ -34,7 +34,7 @@ const BIG5_LABELS: Record<string, string> = {
   "Barbell Row": "Row",
 };
 
-export function Dashboard() {
+export function Dashboard({ onStart }: { onStart: () => void }) {
   const workouts = useStore((s) => s.workouts);
   const exercises = useStore((s) => s.exercises);
   const profile = useStore((s) => s.profile);
@@ -74,6 +74,23 @@ export function Dashboard() {
       return { name, label: BIG5_LABELS[name], orm: bestOrm > 0 ? round1(bestOrm) : null };
     });
   }, [workouts, exercises]);
+
+  if (workouts.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-4 rounded-xl border border-line bg-surface/70 p-8 text-center">
+        <h2 className="text-lg font-semibold text-ink">Welcome to IronLog</h2>
+        <p className="max-w-xs text-sm text-ink-soft">
+          Log your first workout and your streaks, lifts, and progress charts will start filling in here.
+        </p>
+        <button
+          onClick={onStart}
+          className="rounded-xl bg-ember px-5 py-3 font-semibold text-night hover:bg-ember-soft"
+        >
+          Start your first workout
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">
