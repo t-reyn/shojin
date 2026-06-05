@@ -21,6 +21,7 @@ import { ExerciseFigure } from "./ExerciseFigure";
 import { TemplateBuilder } from "./TemplateBuilder";
 import { TemplateEditor } from "./TemplateEditor";
 import { Icon } from "./ShojinUI";
+import { isStandalone, OPEN_INSTALL_EVENT } from "./InstallPrompt";
 import { useThemePref, setThemePref, type ThemePref } from "@/lib/theme";
 import {
   ALL_MOVEMENT_PATTERNS,
@@ -166,6 +167,14 @@ export function Tools({ userEmail }: { userEmail: string }) {
     }));
   }
 
+  function showInstallGuide() {
+    if (isStandalone()) {
+      toast.success("Shojin is already installed on this device.");
+      return;
+    }
+    window.dispatchEvent(new Event(OPEN_INSTALL_EVENT));
+  }
+
   function exportCsv() {
     const csv = exportWorkoutsToCsv(workouts, exercises);
     downloadCsv(`shojin-${new Date().toISOString().slice(0, 10)}.csv`, csv);
@@ -229,6 +238,15 @@ export function Tools({ userEmail }: { userEmail: string }) {
               </button>
             ))}
           </div>
+        </div>
+        <div className="mt-1 flex items-center justify-between py-1">
+          <span className="text-ink-soft">Install app</span>
+          <button
+            onClick={showInstallGuide}
+            className="rounded-full border border-line px-4 py-1.5 text-sm font-semibold text-ink-soft hover:text-ink"
+          >
+            How to install
+          </button>
         </div>
       </section>
 

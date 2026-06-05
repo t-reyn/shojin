@@ -216,5 +216,15 @@
   animation: timer-flash 0.7s ease-in-out 3;
 }
 
+/* gentle nudge for the iOS "tap Share" install hint */
+@keyframes shojin-nudge {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.shojin-nudge { animation: shojin-nudge 1.3s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .shojin-nudge { animation: none; }
+}
+
 /* hide scrollbars (mobile-first chrome) */
 ::-webkit-scrollbar { display: none; }
