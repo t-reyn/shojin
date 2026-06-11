@@ -1,4 +1,5 @@
-import type { MuscleGroup, MovementPattern, WorkoutWithSets } from "./types";
+import type { MuscleGroup, MovementPattern, Unit, WorkoutWithSets } from "./types";
+import { convertWeight } from "./units";
 
 export const MUSCLE_LABELS: Record<MuscleGroup, string> = {
   chest: "Chest",
@@ -33,11 +34,12 @@ export const PATTERN_LABELS: Record<MovementPattern, string> = {
   other: "Other",
 };
 
-/** Volume (weight x reps) summed by muscle group over the given workouts.
- *  Needs a lookup from exercise_id to its muscle group. */
+/** Volume (weight x reps, in `toUnit`) summed by muscle group over the given
+ *  workouts. Needs a lookup from exercise_id to its muscle group. */
 export function volumeByMuscle(
   workouts: WorkoutWithSets[],
   muscleOf: (exerciseId: string) => MuscleGroup | undefined,
+  toUnit: Unit,
 ): Record<MuscleGroup, number> {
   const totals: Record<MuscleGroup, number> = {
     chest: 0,
@@ -51,7 +53,7 @@ export function volumeByMuscle(
     for (const s of w.sets) {
       const mg = muscleOf(s.exercise_id);
       if (!mg || s.is_warmup) continue;
-      totals[mg] += s.weight * s.reps;
+      totals[mg] += convertWeight(s.weight, s.unit ?? "kg", toUnit) * s.reps;
     }
   }
   return totals;

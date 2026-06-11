@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useStore } from "@/lib/store";
 import { buildHeatmap, type HeatCell } from "@/lib/stats";
+import { useTodayKey } from "@/lib/useTodayKey";
 
 const LEVEL_VAR: Record<HeatCell["level"], string> = {
   0: "var(--color-heat-0)",
@@ -14,7 +15,12 @@ const LEVEL_VAR: Record<HeatCell["level"], string> = {
 
 export function StreakHeatmap() {
   const workouts = useStore((s) => s.workouts);
-  const { weeks } = useMemo(() => buildHeatmap(workouts, 26), [workouts]);
+  const unit = useStore((s) => s.profile?.unit ?? "kg");
+  const todayKey = useTodayKey();
+  const { weeks } = useMemo(
+    () => buildHeatmap(workouts, 26, new Date(`${todayKey}T00:00:00`), unit),
+    [workouts, unit, todayKey],
+  );
 
   return (
     <div>

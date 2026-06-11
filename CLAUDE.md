@@ -59,7 +59,7 @@ The active **workout draft** (`store.draft`) and the **rest timer** (`store.rest
 
 `AppShell` owns four tabs — **Home / History / Progress / Profile** — rendered by `Dashboard.tsx` / `History.tsx` / `Progress.tsx` / `Tools.tsx` respectively (the component names predate the tab rename). The bottom bar (`TabBar.tsx`) splits the four tabs around a **center amber `+` FAB** that starts a new workout, or continues the in-progress `draft` (opens the logger directly). Tab icons are **outline when inactive, solid when active** via `TabDef.iconActive` (the four icon SVGs are defined inline in `AppShell.tsx`).
 
-Overlays are sibling `fixed` elements with a strict **z-index ladder** (keep distinct): bottom nav / `InstallPrompt` `z-30` → `StartModal` / `ExercisePicker` `z-40` → `WorkoutLogger` `z-50` → `RestTimer` `z-[60]` → `Toaster` `z-[70]` → `DialogHost` `z-[80]`. `RestTimer` is mounted once in `AppShell` (not inside the logger) with a `bottomOffset` that shrinks when the logger is open.
+Overlays are sibling `fixed` elements with a strict **z-index ladder** (keep distinct): bottom nav / `InstallPrompt` `z-30` → `StartModal` / `TemplateBuilder` / `TemplateEditor` `z-40` → `WorkoutLogger` `z-50` → `ExercisePicker` `z-[55]` → `RestTimer` `z-[60]` → `UpdateBanner` `z-[65]` → `Toaster` `z-[70]` → `DialogHost` `z-[80]`. `RestTimer` is mounted once in `AppShell` (not inside the logger) with a `bottomOffset` that shrinks when the logger is open.
 
 ### Workout logging & the draft model
 

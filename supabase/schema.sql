@@ -310,6 +310,18 @@ create table if not exists feedback (
 );
 -- Dev-only triage flag: set true once the suggestion has shipped.
 alter table feedback add column if not exists addressed boolean not null default false;
+-- Force addressed=false on insert so users can't pre-mark their own feedback as triaged.
+create or replace function feedback_force_unaddressed()
+returns trigger as $$
+begin
+  new.addressed := false;
+  return new;
+end;
+$$ language plpgsql;
+drop trigger if exists feedback_force_unaddressed on feedback;
+create trigger feedback_force_unaddressed
+  before insert on feedback
+  for each row execute function feedback_force_unaddressed();
 alter table feedback enable row level security;
 do $$
 begin

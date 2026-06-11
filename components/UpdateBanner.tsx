@@ -10,12 +10,15 @@ export function UpdateBanner() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
-    navigator.serviceWorker.register("/sw.js").then((reg) => {
+    let reg: ServiceWorkerRegistration | undefined;
+
+    navigator.serviceWorker.register("/sw.js").then((registration) => {
+      reg = registration;
       if (reg.waiting && navigator.serviceWorker.controller) {
         setWaitingSW(reg.waiting);
       }
       reg.addEventListener("updatefound", () => {
-        const next = reg.installing;
+        const next = reg?.installing;
         if (!next) return;
         next.addEventListener("statechange", () => {
           if (next.state === "installed" && navigator.serviceWorker.controller) {
@@ -29,7 +32,16 @@ export function UpdateBanner() {
       if (userTriggered.current) window.location.reload();
     };
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
-    return () => navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") reg?.update();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, []);
 
   if (!waitingSW) return null;
@@ -41,7 +53,7 @@ export function UpdateBanner() {
 
   return (
     <div
-      className="fixed left-3 right-3 z-[100] rounded-xl border border-ember/50 bg-surface/95 p-3 shadow-lg backdrop-blur sm:left-auto sm:right-4 sm:w-72"
+      className="fixed left-3 right-3 z-[65] rounded-xl border border-ember/50 bg-surface/95 p-3 shadow-lg backdrop-blur sm:left-auto sm:right-4 sm:w-72"
       style={{ bottom: "calc(env(safe-area-inset-bottom) + 9.5rem)" }}
     >
       <p className="text-sm font-medium text-ink">Update available</p>

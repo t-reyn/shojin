@@ -1,4 +1,5 @@
-import type { MuscleGroup, WorkoutWithSets } from "./types";
+import type { MuscleGroup, Unit, WorkoutWithSets } from "./types";
+import { convertWeight } from "./units";
 
 /** Local YYYY-MM-DD for a Date (heatmap/streaks work in the user's timezone). */
 export function localDay(d: Date): string {
@@ -8,20 +9,28 @@ export function localDay(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-function setVolume(w: WorkoutWithSets): number {
-  return w.sets.reduce((sum, s) => sum + (s.is_warmup ? 0 : s.weight * s.reps), 0);
+// Sets can carry their own unit (the unit the exercise was logged in at the
+// time), independent of the profile's current unit — convert each set to
+// `toUnit` before summing so totals aren't a meaningless mix of kg and lb.
+function setVolume(w: WorkoutWithSets, toUnit: Unit): number {
+  return w.sets.reduce(
+    (sum, s) => sum + (s.is_warmup ? 0 : convertWeight(s.weight, s.unit ?? "kg", toUnit) * s.reps),
+    0,
+  );
 }
 
-/** Map of local day -> { count, volume } for days that had a workout. */
+/** Map of local day -> { count, volume } for days that had a workout.
+ *  `volume` is expressed in `toUnit`. */
 export function dailyTotals(
   workouts: WorkoutWithSets[],
+  toUnit: Unit,
 ): Map<string, { count: number; volume: number }> {
   const map = new Map<string, { count: number; volume: number }>();
   for (const w of workouts) {
     const key = localDay(new Date(w.performed_at));
     const cur = map.get(key) ?? { count: 0, volume: 0 };
     cur.count += 1;
-    cur.volume += setVolume(w);
+    cur.volume += setVolume(w, toUnit);
     map.set(key, cur);
   }
   return map;
@@ -73,11 +82,13 @@ export interface HeatCell {
 export function buildHeatmap(
   workouts: WorkoutWithSets[],
   numWeeks = 26,
+  now: Date = new Date(),
+  toUnit: Unit = "kg",
 ): { weeks: HeatCell[][]; totalSessions: number } {
-  const totals = dailyTotals(workouts);
+  const totals = dailyTotals(workouts, toUnit);
   const maxVol = Math.max(1, ...[...totals.values()].map((t) => t.volume));
 
-  const today = new Date();
+  const today = new Date(now);
   today.setHours(0, 0, 0, 0);
 
   // Start at the Monday of the week (numWeeks-1) weeks ago.
@@ -115,11 +126,13 @@ export function buildHeatmap(
   return { weeks, totalSessions };
 }
 
-/** Working-set volume by muscle group for workouts whose local day falls in
- *  [from, to] (inclusive). Omit `to` for "from .. today". Dates are YYYY-MM-DD. */
+/** Working-set volume by muscle group (in `toUnit`) for workouts whose local
+ *  day falls in [from, to] (inclusive). Omit `to` for "from .. today". Dates
+ *  are YYYY-MM-DD. */
 export function volumeByMuscleForRange(
   workouts: WorkoutWithSets[],
   muscleOf: (exerciseId: string) => MuscleGroup | undefined,
+  toUnit: Unit,
   from: string,
   to?: string,
 ): Record<MuscleGroup, number> {
@@ -139,7 +152,7 @@ export function volumeByMuscleForRange(
       if (s.is_warmup) continue;
       const mg = muscleOf(s.exercise_id);
       if (!mg) continue;
-      totals[mg] += s.weight * s.reps;
+      totals[mg] += convertWeight(s.weight, s.unit ?? "kg", toUnit) * s.reps;
     }
   }
   return totals;

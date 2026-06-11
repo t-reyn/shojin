@@ -17,6 +17,8 @@ const PATTERNS: MovementPattern[] = [
   "horizontal_pull", "vertical_pull", "curl", "triceps_extension", "core", "calf", "other",
 ];
 
+const EQUIPMENT_OPTIONS = ["barbell", "dumbbell", "cable", "machine", "bodyweight", "other"];
+
 function SearchGlyph() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="shrink-0 text-ink-faint">
@@ -42,6 +44,7 @@ export function ExercisePicker({
   const [name, setName] = useState("");
   const [mg, setMg] = useState<MuscleGroup>("chest");
   const [pattern, setPattern] = useState<MovementPattern>("horizontal_press");
+  const [equipment, setEquipment] = useState("barbell");
   const [busy, setBusy] = useState(false);
 
   const filtered = useMemo(() => {
@@ -62,7 +65,7 @@ export function ExercisePicker({
         name: name.trim(),
         muscle_group: mg,
         movement_pattern: pattern,
-        equipment: "other",
+        equipment,
       });
       await refreshExercises();
       onPick(created.id);
@@ -74,20 +77,23 @@ export function ExercisePicker({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-night">
+    <div className="fixed inset-0 z-[55] flex flex-col bg-night">
       {/* Search header — fixed, non-scrolling */}
       <div className="flex shrink-0 items-center gap-3 px-[18px] pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
-        <div className="flex h-12 flex-1 items-center gap-[11px] rounded-2xl border-[1.5px] border-amber bg-surface px-4">
-          <SearchGlyph />
-          <input
-            autoFocus
-            value={q}
-            onChange={(e) => { setQ(e.target.value); if (creating) setCreating(false); }}
-            placeholder="Search exercises…"
-            aria-label="Search exercises"
-            className="min-w-0 flex-1 bg-transparent text-[16px] text-ink outline-none placeholder:text-ink-faint"
-          />
-        </div>
+        {!creating && (
+          <div className="flex h-12 flex-1 items-center gap-[11px] rounded-2xl border-[1.5px] border-amber bg-surface px-4">
+            <SearchGlyph />
+            <input
+              autoFocus
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search exercises…"
+              aria-label="Search exercises"
+              className="min-w-0 flex-1 bg-transparent text-[16px] text-ink outline-none placeholder:text-ink-faint"
+            />
+          </div>
+        )}
+        {creating && <h3 className="flex-1 font-medium">New custom exercise</h3>}
         <button
           onClick={onClose}
           aria-label="Close"
@@ -101,8 +107,8 @@ export function ExercisePicker({
 
       {creating ? (
         <div className="flex flex-col gap-3 overflow-y-auto p-4">
-          <h3 className="font-medium">New custom exercise</h3>
           <input
+            autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Exercise name"
@@ -117,6 +123,18 @@ export function ExercisePicker({
             {ALL_MUSCLE_GROUPS.map((g) => (
               <option key={g} value={g}>
                 {MUSCLE_LABELS[g]}
+              </option>
+            ))}
+          </select>
+          <label className="text-sm text-ink-soft">Equipment</label>
+          <select
+            value={equipment}
+            onChange={(e) => setEquipment(e.target.value)}
+            className="rounded-lg border border-line bg-surface px-3 py-2"
+          >
+            {EQUIPMENT_OPTIONS.map((eq) => (
+              <option key={eq} value={eq}>
+                {eq}
               </option>
             ))}
           </select>

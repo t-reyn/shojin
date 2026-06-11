@@ -64,14 +64,13 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
       confirmLabel: "Save template",
     });
     if (!name) return;
-    const sets = draft.exercises.flatMap((ex) =>
-      ex.sets.map((s, idx) => ({
-        exercise_id: ex.exerciseId,
-        set_index: idx,
-        weight: s.weight,
-        reps: s.reps,
-      })),
-    );
+    const sets = draft.exercises
+      .flatMap((ex) =>
+        ex.sets
+          .filter((s) => !s.isWarmup)
+          .map((s) => ({ exercise_id: ex.exerciseId, weight: s.weight, reps: s.reps })),
+      )
+      .map((s, set_index) => ({ ...s, set_index }));
     setSaving(true);
     try {
       await saveTemplate({ name, sets });
@@ -247,7 +246,14 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
                 </div>
 
                 {ex.sets.map((set, setIdx) => (
-                  <SetRow key={setIdx} exIdx={exIdx} setIdx={setIdx} set={set} unit={exUnit} />
+                  <SetRow
+                    key={setIdx}
+                    exIdx={exIdx}
+                    setIdx={setIdx}
+                    exerciseId={ex.exerciseId}
+                    set={set}
+                    unit={exUnit}
+                  />
                 ))}
 
                 <button

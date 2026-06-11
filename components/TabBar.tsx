@@ -18,13 +18,16 @@ interface Props<T extends string> {
   onFab: () => void;
   /** true while a workout draft is in progress — FAB reads "continue" */
   fabActive?: boolean;
+  /** true when the in-progress draft is editing a saved workout — FAB reads "Continue editing" */
+  fabEditing?: boolean;
 }
 
 /**
  * Shojin bottom bar: four tabs split around a raised amber + FAB.
- * Layout: [tab tab] (FAB) [tab tab].
+ * Layout: [tab tab] (FAB) [tab tab]. The FAB is a sibling of the
+ * `role="tablist"` so assistive tech enumerates exactly four tabs.
  */
-export function TabBar<T extends string>({ tabs, active, onChange, onFab, fabActive }: Props<T>) {
+export function TabBar<T extends string>({ tabs, active, onChange, onFab, fabActive, fabEditing }: Props<T>) {
   const listRef = useRef<HTMLDivElement>(null);
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
@@ -66,26 +69,30 @@ export function TabBar<T extends string>({ tabs, active, onChange, onFab, fabAct
   };
 
   return (
-    <div
-      ref={listRef}
-      role="tablist"
-      aria-label="Sections"
-      onKeyDown={handleKeyDown}
-      className="flex w-full items-start justify-around gap-1"
-    >
-      {tabs.slice(0, 2).map(renderTab)}
+    <div className="relative flex w-full items-start">
+      <div
+        ref={listRef}
+        role="tablist"
+        aria-label="Sections"
+        onKeyDown={handleKeyDown}
+        className="flex w-full items-start justify-around gap-1"
+      >
+        {tabs.slice(0, 2).map(renderTab)}
 
-      <div className="flex flex-1 justify-center">
+        <div className="flex-1" aria-hidden="true" />
+
+        {tabs.slice(2).map(renderTab)}
+      </div>
+
+      <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center">
         <button
           onClick={onFab}
-          aria-label={fabActive ? "Continue workout" : "Start workout"}
-          className="-mt-1.5 flex h-[52px] w-[52px] items-center justify-center rounded-[18px] bg-amber text-on-amber shadow-[0_6px_16px_rgba(255,159,41,0.45)] transition-transform active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-ink"
+          aria-label={fabEditing ? "Continue editing" : fabActive ? "Continue workout" : "Start workout"}
+          className="pointer-events-auto -mt-1.5 flex h-[52px] w-[52px] items-center justify-center rounded-[18px] bg-amber text-on-amber shadow-[0_6px_16px_rgba(255,159,41,0.45)] transition-transform active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-ink"
         >
           <Icon name={fabActive ? "play" : "plus"} size={fabActive ? 22 : 26} color="var(--color-on-amber)" sw={2.4} />
         </button>
       </div>
-
-      {tabs.slice(2).map(renderTab)}
     </div>
   );
 }

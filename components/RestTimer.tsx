@@ -2,30 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
-
-function beep() {
-  try {
-    const Ctx =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext })
-        .webkitAudioContext;
-    const ctx = new Ctx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = "sine";
-    osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.001, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.5);
-    osc.onended = () => ctx.close();
-  } catch {
-    /* audio not available — visual flash still fires */
-  }
-}
+import { playBeep } from "@/lib/audio";
 
 export function RestTimer({ bottomOffset }: { bottomOffset?: string } = {}) {
   const rest = useStore((s) => s.rest);
@@ -50,7 +27,7 @@ export function RestTimer({ bottomOffset }: { bottomOffset?: string } = {}) {
   useEffect(() => {
     if (done && !beepedRef.current) {
       beepedRef.current = true;
-      beep();
+      playBeep();
       const id = setTimeout(() => stopRest(), 2500);
       return () => clearTimeout(id);
     }
@@ -105,7 +82,7 @@ export function RestTimer({ bottomOffset }: { bottomOffset?: string } = {}) {
             className="h-full transition-[width] duration-200"
             style={{
               width: `${done ? 0 : Math.min(100, pct)}%`,
-              backgroundColor: pct > 40 ? "var(--color-ember)" : pct > 15 ? "#f59e0b" : "#ef4444",
+              backgroundColor: pct > 40 ? "var(--color-ember)" : pct > 15 ? "var(--color-warn)" : "var(--color-danger)",
             }}
           />
         </div>

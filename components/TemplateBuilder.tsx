@@ -11,7 +11,7 @@ import { ExercisePicker } from "./ExercisePicker";
 export function TemplateBuilder({
   onClose,
   onSaved,
-  className = "z-50",
+  className = "z-40",
 }: {
   onClose: () => void;
   onSaved?: () => void;
@@ -29,8 +29,8 @@ export function TemplateBuilder({
     if (!tplName.trim() || tplExs.length === 0) return;
     setSavingTpl(true);
     try {
-      const sets = tplExs.flatMap((exercise_id) =>
-        [0, 1, 2].map((set_index) => ({ exercise_id, set_index, weight: 0, reps: 0 })),
+      const sets = tplExs.flatMap((exercise_id, exIdx) =>
+        [0, 1, 2].map((i) => ({ exercise_id, set_index: exIdx * 3 + i, weight: 0, reps: 0 })),
       );
       const name = tplName.trim();
       await saveTemplate({ name, sets });

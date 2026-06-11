@@ -13,7 +13,10 @@ export function SetupNotice() {
 NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR-ANON-KEY`}
       </pre>
       <p className="text-sm text-ink-faint">
-        Enable email auth (magic links) under Authentication → Providers.
+        Enable the Email provider (with email/password sign-in) under
+        Authentication → Providers, and confirm the password-reset email
+        template is on under Authentication → Emails so &quot;Forgot
+        password?&quot; works.
       </p>
     </div>
   );

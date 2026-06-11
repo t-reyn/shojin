@@ -11,17 +11,22 @@ import { ExercisePicker } from "./ExercisePicker";
 interface EditSet { weight: number; reps: number; }
 interface EditEx { exerciseId: string; sets: EditSet[]; }
 
+// Group by *contiguous runs* of matching exercise_id (after sorting by
+// set_index), not by exercise_id alone — the same exercise can appear in
+// separate, non-adjacent groups (e.g. supersets).
 function buildExercises(t: TemplateWithSets): EditEx[] {
-  const byEx = new Map<string, EditSet[]>();
-  const order: string[] = [];
-  for (const s of [...t.sets].sort((a, b) => a.set_index - b.set_index)) {
-    if (!byEx.has(s.exercise_id)) {
-      byEx.set(s.exercise_id, []);
-      order.push(s.exercise_id);
+  const sorted = [...t.sets].sort((a, b) => a.set_index - b.set_index);
+  const exercises: EditEx[] = [];
+  for (const s of sorted) {
+    const last = exercises[exercises.length - 1];
+    const setEntry: EditSet = { weight: s.weight, reps: s.reps };
+    if (last && last.exerciseId === s.exercise_id) {
+      last.sets.push(setEntry);
+    } else {
+      exercises.push({ exerciseId: s.exercise_id, sets: [setEntry] });
     }
-    byEx.get(s.exercise_id)!.push({ weight: s.weight, reps: s.reps });
   }
-  return order.map((exerciseId) => ({ exerciseId, sets: byEx.get(exerciseId)! }));
+  return exercises;
 }
 
 export function TemplateEditor({
@@ -83,9 +88,11 @@ export function TemplateEditor({
     if (!name.trim() || exs.length === 0) return;
     setSaving(true);
     try {
-      const sets = exs.flatMap(({ exerciseId, sets }) =>
-        sets.map((s, set_index) => ({ exercise_id: exerciseId, set_index, weight: s.weight, reps: s.reps })),
-      );
+      const sets = exs
+        .flatMap(({ exerciseId, sets }) =>
+          sets.map((s) => ({ exercise_id: exerciseId, weight: s.weight, reps: s.reps })),
+        )
+        .map((s, set_index) => ({ ...s, set_index }));
       await updateTemplate(template.id, name.trim(), sets);
       onSave();
     } catch {

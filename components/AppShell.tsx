@@ -78,12 +78,21 @@ export function AppShell({ userEmail }: { userEmail: string }) {
   const hydrate = useStore((s) => s.hydrate);
   const draft = useStore((s) => s.draft);
   const [error, setError] = useState("");
+  const [retrying, setRetrying] = useState(false);
   const [showStart, setShowStart] = useState(false);
   const [showLogger, setShowLogger] = useState(false);
 
   useEffect(() => {
     hydrate().catch((e) => setError(e.message ?? String(e)));
   }, [hydrate]);
+
+  function retryHydrate() {
+    setRetrying(true);
+    setError("");
+    hydrate()
+      .catch((e) => setError(e.message ?? String(e)))
+      .finally(() => setRetrying(false));
+  }
 
   function openLogger() {
     setShowLogger(true);
@@ -98,8 +107,15 @@ export function AppShell({ userEmail }: { userEmail: string }) {
     <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-3xl flex-col">
       <div className="flex flex-1 flex-col gap-4 px-5 pt-12 pb-32 sm:px-6">
         {error && (
-          <div className="rounded-2xl border border-danger/40 bg-danger/10 p-3 text-sm text-danger-soft">
-            {error}
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-danger/40 bg-danger/10 p-3 text-sm text-danger-soft">
+            <span>{error}</span>
+            <button
+              onClick={retryHydrate}
+              disabled={retrying}
+              className="shrink-0 rounded-lg border border-danger/40 px-3 py-1 text-xs font-semibold text-danger-soft transition-colors hover:bg-danger/10 disabled:opacity-60"
+            >
+              {retrying ? "Retrying…" : "Retry"}
+            </button>
           </div>
         )}
 
@@ -148,7 +164,14 @@ export function AppShell({ userEmail }: { userEmail: string }) {
         }}
       >
         <div className="mx-auto w-full max-w-3xl px-4 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-          <TabBar tabs={TABS} active={active} onChange={setActive} onFab={onFab} fabActive={!!draft} />
+          <TabBar
+            tabs={TABS}
+            active={active}
+            onChange={setActive}
+            onFab={onFab}
+            fabActive={!!draft}
+            fabEditing={!!draft?.workoutId}
+          />
         </div>
       </nav>
 

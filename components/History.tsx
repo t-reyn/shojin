@@ -5,6 +5,7 @@ import { useStore } from "@/lib/store";
 import { deleteWorkout } from "@/lib/db";
 import { confirmDialog } from "@/lib/dialog";
 import { toast } from "@/lib/toast";
+import { convertWeight } from "@/lib/units";
 import { Eyebrow, Icon } from "./ShojinUI";
 
 function fmtDuration(s: number | null) {
@@ -37,7 +38,7 @@ export function History({ onStart, onNew }: { onStart: () => void; onNew: () => 
         const exerciseNames: string[] = [];
         let volume = 0;
         for (const s of w.sets) {
-          if (!s.is_warmup) volume += s.weight * s.reps;
+          if (!s.is_warmup) volume += convertWeight(s.weight, s.unit ?? "kg", unit) * s.reps;
           if (!seen.has(s.exercise_id)) {
             seen.add(s.exercise_id);
             const ex = exMap.get(s.exercise_id);
@@ -57,7 +58,7 @@ export function History({ onStart, onNew }: { onStart: () => void; onNew: () => 
       });
     const totalVolume = allWorkouts.reduce((sum, w) => sum + w.volume, 0);
     return { allWorkouts, totalVolume };
-  }, [workouts, exercises]);
+  }, [workouts, exercises, unit]);
 
   async function withReplaceGuard(action: () => void) {
     if (draft) {

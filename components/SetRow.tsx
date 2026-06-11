@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useStore, type DraftSetEntry } from "@/lib/store";
 import { toast } from "@/lib/toast";
+import { primeAudio } from "@/lib/audio";
 import type { Unit } from "@/lib/types";
 
 // RPE below 5 isn't meaningful for tracking, so 1–4 collapse into a single "<5"
@@ -18,28 +20,44 @@ const RPE_OPTIONS: { value: number; label: string }[] = [
 interface Props {
   exIdx: number;
   setIdx: number;
+  exerciseId: string;
   set: DraftSetEntry;
   unit: Unit;
 }
 
-export function SetRow({ exIdx, setIdx, set, unit }: Props) {
+export function SetRow({ exIdx, setIdx, exerciseId, set, unit }: Props) {
   const update = useStore((s) => s.updateDraftSet);
   const remove = useStore((s) => s.removeDraftSet);
   const insert = useStore((s) => s.insertDraftSet);
   const startRest = useStore((s) => s.startRest);
   const restDuration = useStore((s) => s.rest.duration);
+  // Raw text while the field is focused so partial entries like "2." or "0.5"
+  // aren't collapsed by the controlled number value; reverts to the canonical
+  // formatted value on blur.
+  const [weightBuf, setWeightBuf] = useState<string | null>(null);
+  const [repsBuf, setRepsBuf] = useState<string | null>(null);
 
   function toggleDone() {
     const next = !set.done;
     update(exIdx, setIdx, { done: next });
-    if (next && !set.isWarmup) startRest(restDuration);
+    if (next && !set.isWarmup) {
+      primeAudio(); // must run inside this gesture for iOS to allow the rest-done beep
+      startRest(restDuration);
+    }
   }
 
   function removeWithUndo() {
     const snapshot = set;
     remove(exIdx, setIdx);
     toast.show(`Removed set ${setIdx + 1}.`, {
-      action: { label: "Undo", onClick: () => insert(exIdx, setIdx, snapshot) },
+      action: {
+        label: "Undo",
+        onClick: () => {
+          if (!insert(exerciseId, setIdx, snapshot)) {
+            toast.error("Couldn't undo — that exercise is no longer in this workout.");
+          }
+        },
+      },
     });
   }
 
@@ -70,9 +88,14 @@ export function SetRow({ exIdx, setIdx, set, unit }: Props) {
         type="number"
         inputMode="decimal"
         aria-label={`Set ${setIdx + 1} weight in ${unit}`}
-        value={set.weight || ""}
+        value={weightBuf ?? (set.weight || "")}
         onFocus={(e) => e.currentTarget.select()}
-        onChange={(e) => update(exIdx, setIdx, { weight: parseFloat(e.target.value) || 0 })}
+        onChange={(e) => {
+          const v = e.target.value;
+          setWeightBuf(v);
+          update(exIdx, setIdx, { weight: parseFloat(v) || 0 });
+        }}
+        onBlur={() => setWeightBuf(null)}
         className="w-full min-w-0 flex-1 rounded-md border border-line bg-surface px-2 py-2 text-center text-ink outline-none focus:border-ember"
         placeholder="0"
       />
@@ -81,9 +104,14 @@ export function SetRow({ exIdx, setIdx, set, unit }: Props) {
         type="number"
         inputMode="numeric"
         aria-label={`Set ${setIdx + 1} reps`}
-        value={set.reps || ""}
+        value={repsBuf ?? (set.reps || "")}
         onFocus={(e) => e.currentTarget.select()}
-        onChange={(e) => update(exIdx, setIdx, { reps: parseInt(e.target.value) || 0 })}
+        onChange={(e) => {
+          const v = e.target.value;
+          setRepsBuf(v);
+          update(exIdx, setIdx, { reps: parseInt(v) || 0 });
+        }}
+        onBlur={() => setRepsBuf(null)}
         className="w-full min-w-0 flex-1 rounded-md border border-line bg-surface px-2 py-2 text-center text-ink outline-none focus:border-ember"
         placeholder="0"
       />

@@ -176,6 +176,7 @@
   --color-steel: #93a4bf;
   --color-iron: #6b7280;
   --color-violet: #a78bfa;
+  --color-warn: #f59e0b; /* rest-timer mid-countdown */
   --color-mg-chest: var(--rp-mg-chest);
   --color-mg-back: var(--rp-mg-back);
   --color-mg-legs: var(--rp-mg-legs);

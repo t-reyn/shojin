@@ -13,6 +13,7 @@ import {
 import { useStore } from "@/lib/store";
 import { blendedOneRepMax, estimateOneRepMax, round1 } from "@/lib/oneRepMax";
 import { localDay } from "@/lib/stats";
+import { convertWeight } from "@/lib/units";
 import { volumeByMuscle, MUSCLE_LABELS } from "@/lib/muscles";
 import type { MuscleGroup } from "@/lib/types";
 import { Eyebrow, Delta, Pill } from "./ShojinUI";
@@ -59,7 +60,9 @@ export function Progress() {
         new Date(a.performed_at).getTime() - new Date(b.performed_at).getTime(),
     );
     for (const w of asc) {
-      const sets = w.sets.filter((s) => s.exercise_id === selected && !s.is_warmup);
+      const sets = w.sets
+        .filter((s) => s.exercise_id === selected && !s.is_warmup)
+        .map((s) => ({ ...s, weight: convertWeight(s.weight, s.unit ?? "kg", unit) }));
       if (!sets.length) continue;
       let value = 0;
       if (metric === "e1rm") {
@@ -72,12 +75,12 @@ export function Progress() {
       points.push({ date: localDay(new Date(w.performed_at)), value: round1(value) });
     }
     return points;
-  }, [workouts, selected, metric]);
+  }, [workouts, selected, metric, unit]);
 
   const exerciseById = useStore((s) => s.exerciseById);
 
   const muscleSplit = useMemo(() => {
-    const totals = volumeByMuscle(workouts, (id) => exerciseById(id)?.muscle_group);
+    const totals = volumeByMuscle(workouts, (id) => exerciseById(id)?.muscle_group, unit);
     const entries = (Object.keys(totals) as MuscleGroup[])
       .map((mg) => ({ mg, vol: totals[mg] }))
       .filter((e) => e.vol > 0)
@@ -91,7 +94,7 @@ export function Progress() {
       barW: Math.round((e.vol / max) * 100),
       top: i === 0,
     }));
-  }, [workouts, exerciseById]);
+  }, [workouts, exerciseById, unit]);
 
   const prs = useMemo(() => {
     return PR_LIFTS.map(({ label, names }) => {
@@ -101,14 +104,15 @@ export function Progress() {
         for (const w of workouts) {
           for (const s of w.sets) {
             if (!ids.has(s.exercise_id) || s.is_warmup || !s.completed || s.reps <= 0) continue;
-            const orm = estimateOneRepMax(s.weight, s.reps, "epley");
+            const weight = convertWeight(s.weight, s.unit ?? "kg", unit);
+            const orm = estimateOneRepMax(weight, s.reps, "epley");
             if (orm > best) best = orm;
           }
         }
       }
       return { label, value: best > 0 ? round1(best) : null };
     });
-  }, [workouts, exercises]);
+  }, [workouts, exercises, unit]);
 
   if (logged.length === 0) {
     return (
@@ -138,6 +142,7 @@ export function Progress() {
       <select
         value={selected}
         onChange={(e) => setExerciseId(e.target.value)}
+        aria-label="Exercise"
         className="rounded-full border border-line bg-surface px-4 py-2.5 text-sm font-semibold text-ink outline-none focus:border-green-ink"
       >
         {logged.map((e) => (
@@ -211,10 +216,11 @@ export function Progress() {
                   fontSize: 12,
                 }}
               />
-              <Area type="monotone" dataKey="value" stroke="none" fill="url(#rpArea)" />
+              <Area type="monotone" dataKey="value" stroke="none" fill="url(#rpArea)" tooltipType="none" />
               <Line
                 type="monotone"
                 dataKey="value"
+                name={metricLabel}
                 stroke="var(--color-green)"
                 strokeWidth={2.6}
                 dot={{ r: 3, fill: "var(--color-surface)", stroke: "var(--color-green)", strokeWidth: 2.4 }}

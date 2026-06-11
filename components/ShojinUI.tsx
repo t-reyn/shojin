@@ -3,9 +3,6 @@ import type { CSSProperties, ReactNode } from "react";
 /* Shojin shared primitives — ported from the design handoff. */
 
 type IconName =
-  | "home"
-  | "history"
-  | "progress"
   | "profile"
   | "plus"
   | "play"
@@ -13,14 +10,8 @@ type IconName =
   | "flame"
   | "check"
   | "chevron"
-  | "clock"
-  | "timer"
   | "bolt"
   | "edit"
-  | "filter"
-  | "bell"
-  | "target"
-  | "arrowUp"
   | "sun"
   | "moon"
   | "trash";
@@ -46,26 +37,6 @@ export function Icon({
     strokeLinejoin: "round" as const,
   };
   const paths: Record<IconName, ReactNode> = {
-    home: (
-      <>
-        <path d="M3 10.5 12 3l9 7.5" {...p} />
-        <path d="M5.5 9.5V20h13V9.5" {...p} />
-      </>
-    ),
-    history: (
-      <>
-        <circle cx="12" cy="12" r="8.5" {...p} />
-        <path d="M12 7.5V12l3 2" {...p} />
-      </>
-    ),
-    progress: (
-      <>
-        <path d="M4 19.5h16" {...p} />
-        <rect x="5.5" y="12" width="3.6" height="6.2" rx="1" {...p} />
-        <rect x="10.2" y="8" width="3.6" height="10.2" rx="1" {...p} />
-        <rect x="14.9" y="4.5" width="3.6" height="13.7" rx="1" {...p} />
-      </>
-    ),
     profile: (
       <>
         <circle cx="12" cy="8.5" r="3.6" {...p} />
@@ -94,34 +65,8 @@ export function Icon({
     ),
     check: <path d="M5 12.5 10 17l9-10" {...p} />,
     chevron: <path d="M9 5l7 7-7 7" {...p} />,
-    clock: (
-      <>
-        <circle cx="12" cy="12" r="8.5" {...p} />
-        <path d="M12 7.5V12l3 2" {...p} />
-      </>
-    ),
-    timer: (
-      <>
-        <circle cx="12" cy="13" r="7.5" {...p} />
-        <path d="M12 13V9M9.5 2.5h5" {...p} />
-      </>
-    ),
     bolt: <path d="M13 3 5 13.5h6L10 21l9-11h-6z" {...p} />,
     edit: <path d="M14 5l5 5M4 20l1-4L16 5l3 3L8 19z" {...p} />,
-    filter: <path d="M4 6h16M7 12h10M10 18h4" {...p} />,
-    bell: (
-      <>
-        <path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z" {...p} />
-        <path d="M10 19a2 2 0 0 0 4 0" {...p} />
-      </>
-    ),
-    target: (
-      <>
-        <circle cx="12" cy="12" r="8" {...p} />
-        <circle cx="12" cy="12" r="3.4" {...p} />
-      </>
-    ),
-    arrowUp: <path d="M12 19V5M6 11l6-6 6 6" {...p} />,
     sun: (
       <>
         <circle cx="12" cy="12" r="4" {...p} />

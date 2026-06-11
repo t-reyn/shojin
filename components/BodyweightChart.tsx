@@ -13,6 +13,8 @@ import {
 import { useStore } from "@/lib/store";
 import { upsertBodyweight, deleteBodyweight } from "@/lib/db";
 import { toast } from "@/lib/toast";
+import { convertWeight } from "@/lib/units";
+import { round1 } from "@/lib/oneRepMax";
 
 export function BodyweightChart() {
   const entries = useStore((s) => s.bodyweight);
@@ -34,8 +36,13 @@ export function BodyweightChart() {
     }
   }
 
-  const data = entries.map((e) => ({ date: e.logged_on, weight: e.weight }));
-  const latest = entries[entries.length - 1]?.weight;
+  // Each entry carries the unit it was logged in; convert to the profile's
+  // current unit so a unit change doesn't relabel old values in place.
+  const data = entries.map((e) => ({
+    date: e.logged_on,
+    weight: round1(convertWeight(e.weight, e.unit, unit)),
+  }));
+  const latest = data[data.length - 1]?.weight;
 
   async function add() {
     const w = parseFloat(value);
@@ -131,7 +138,7 @@ export function BodyweightChart() {
           {[...entries].reverse().map((e) => (
             <li key={e.id} className="flex items-center justify-between border-t border-line py-1.5 text-sm">
               <span className="text-ink-faint">{e.logged_on}</span>
-              <span className="text-ink">{e.weight} {unit}</span>
+              <span className="text-ink">{round1(convertWeight(e.weight, e.unit, unit))} {unit}</span>
               <button
                 onClick={() => remove(e.id)}
                 disabled={deleting === e.id}

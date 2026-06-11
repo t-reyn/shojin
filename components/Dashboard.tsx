@@ -3,6 +3,8 @@
 import { useMemo } from "react";
 import { useStore } from "@/lib/store";
 import { computeStreaks, dailyTotals, localDay } from "@/lib/stats";
+import { convertWeight } from "@/lib/units";
+import { useTodayKey } from "@/lib/useTodayKey";
 import { StreakHeatmap } from "./StreakHeatmap";
 import { BodyweightChart } from "./BodyweightChart";
 import { MuscleRadar } from "./MuscleRadar";
@@ -55,6 +57,7 @@ export function Dashboard({
   const profile = useStore((s) => s.profile);
   const draft = useStore((s) => s.draft);
   const unit = profile?.unit ?? "kg";
+  const todayKeyTick = useTodayKey();
 
   const view = useMemo(() => {
     const now = new Date();
@@ -65,7 +68,7 @@ export function Dashboard({
     const hr = now.getHours();
     const greeting = hr < 12 ? "Morning" : hr < 18 ? "Afternoon" : "Evening";
 
-    const totals = dailyTotals(workouts);
+    const totals = dailyTotals(workouts, unit);
     const days = new Set(totals.keys());
     const { current, longest } = computeStreaks(days);
 
@@ -102,7 +105,7 @@ export function Dashboard({
     const monday = new Date(today0);
     monday.setDate(monday.getDate() - dow);
     const labels = ["M", "T", "W", "T", "F", "S", "S"];
-    const todayKey = localDay(today0);
+    const todayKey = todayKeyTick;
     const weekDays: WeekDay[] = labels.map((l, i) => {
       const d = new Date(monday);
       d.setDate(d.getDate() + i);
@@ -116,7 +119,7 @@ export function Dashboard({
     });
 
     return { dateLabel, greeting, current, longest, total, weekVol, weekSessions, deltaPct, weekDays };
-  }, [workouts]);
+  }, [workouts, unit, todayKeyTick]);
 
   const big5Orm = useMemo(() => {
     return BIG5.map((name) => {
@@ -126,14 +129,15 @@ export function Dashboard({
       for (const w of workouts) {
         for (const s of w.sets) {
           if (s.exercise_id === ex.id && !s.is_warmup && s.completed && s.reps > 0) {
-            const orm = estimateOneRepMax(s.weight, s.reps, "epley");
+            const weight = convertWeight(s.weight, s.unit ?? "kg", unit);
+            const orm = estimateOneRepMax(weight, s.reps, "epley");
             if (orm > bestOrm) bestOrm = orm;
           }
         }
       }
       return { name, label: BIG5_LABELS[name], orm: bestOrm > 0 ? round1(bestOrm) : null };
     });
-  }, [workouts, exercises]);
+  }, [workouts, exercises, unit]);
 
   const Header = (
     <div className="flex flex-col gap-5">
@@ -153,7 +157,7 @@ export function Dashboard({
       </div>
       <div>
         <Eyebrow style={{ marginBottom: 7 }}>{view.dateLabel}</Eyebrow>
-        <h1 className="text-[30px] font-extrabold leading-none tracking-[-0.025em] whitespace-nowrap">
+        <h1 className="text-[30px] font-extrabold leading-tight tracking-[-0.025em]">
           {view.greeting}, {nameFromEmail(userEmail)}
         </h1>
       </div>
@@ -199,7 +203,7 @@ export function Dashboard({
           <Icon name="dumbbell" size={150} color="var(--color-on-green)" />
         </div>
         <div className="rp-eyebrow mb-3" style={{ color: "var(--color-amber)" }}>
-          {draft ? "IN PROGRESS" : "READY TO LIFT"}
+          {draft ? (draft.workoutId ? "EDITING" : "IN PROGRESS") : "READY TO LIFT"}
         </div>
         <div className="text-[27px] font-extrabold tracking-[-0.025em]">
           {draft ? draft.name : "Start training"}
@@ -214,7 +218,7 @@ export function Dashboard({
           className="mt-[18px] flex w-full items-center justify-center gap-2 rounded-full bg-amber py-3.5 font-bold text-on-amber"
         >
           <Icon name="play" size={17} color="var(--color-on-amber)" />
-          {draft ? "Continue workout" : "Start workout"}
+          {draft ? (draft.workoutId ? "Continue editing" : "Continue workout") : "Start workout"}
         </button>
       </div>
 
