@@ -6,11 +6,37 @@ import { saveTemplate } from "@/lib/db";
 import { MUSCLE_COLORS } from "@/lib/muscles";
 import { confirmDialog, promptDialog } from "@/lib/dialog";
 import { toast } from "@/lib/toast";
+import {
+  lastSessionSummary,
+  prevHintsFor,
+  recentSessionsFor,
+  suggestNextLoad,
+  type Suggestion,
+} from "@/lib/progression";
 import type { Readiness } from "@/lib/types";
 import { ExerciseIcon } from "./ExerciseIcon";
 import { ExercisePicker } from "./ExercisePicker";
 import { SetRow } from "./SetRow";
 import { Icon } from "./ShojinUI";
+
+const SUGGESTION_CLASS: Record<Suggestion["kind"], string> = {
+  increase: "bg-green-soft text-green-ink",
+  hold: "border border-line bg-surface text-ink-soft",
+  deload: "bg-amber/15 text-amber",
+};
+
+const SUGGESTION_TITLE: Record<Suggestion["kind"], string> = {
+  increase: "Top sets at RPE ≤8 last time — add load. Tap to fill working sets.",
+  hold: "RPE hit 9–10 last time — consolidate at this weight. Tap to fill working sets.",
+  deload: "Reps dropped at this weight — back off ~5%. Tap to fill working sets.",
+};
+
+function suggestionLabel(s: Suggestion, unit: string): string {
+  const arrow = s.kind === "increase" ? "↑" : s.kind === "deload" ? "↓" : "=";
+  if (s.seconds != null) return `${arrow} ${s.seconds}s`;
+  if (s.addReps) return `${arrow} ${s.reps} reps`;
+  return `${arrow} ${s.weight} ${unit} × ${s.reps}`;
+}
 
 const READINESS_ROWS: { key: keyof Readiness; label: string; hint: string }[] = [
   { key: "sleep", label: "Sleep", hint: "poor → great" },
@@ -97,6 +123,8 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
   const removeExercise = useStore((s) => s.removeDraftExercise);
   const insertExercise = useStore((s) => s.insertDraftExercise);
   const addSet = useStore((s) => s.addDraftSet);
+  const updateSet = useStore((s) => s.updateDraftSet);
+  const workouts = useStore((s) => s.workouts);
   const toggleUnit = useStore((s) => s.toggleDraftExerciseUnit);
   const toggleLink = useStore((s) => s.toggleDraftExerciseLink);
   const setExerciseNotes = useStore((s) => s.setDraftExerciseNotes);
@@ -162,6 +190,16 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  function applySuggestion(exIdx: number, sugg: Suggestion, isDuration: boolean) {
+    if (!draft) return;
+    draft.exercises[exIdx].sets.forEach((s, i) => {
+      if (s.setType !== "normal") return;
+      if (isDuration) updateSet(exIdx, i, { seconds: sugg.seconds ?? 0 });
+      else if (sugg.addReps) updateSet(exIdx, i, { reps: sugg.reps });
+      else updateSet(exIdx, i, { weight: sugg.weight, reps: sugg.reps });
+    });
   }
 
   async function editPinnedNote(exerciseId: string, exerciseName: string) {
@@ -286,6 +324,12 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
             const exType = meta?.exercise_type ?? "weight_reps";
             const isBodyweight = meta?.equipment === "bodyweight";
             const pinned = exerciseNotes[ex.exerciseId];
+            const sessions =
+              draft.workoutId || !meta ? [] : recentSessionsFor(workouts, ex.exerciseId);
+            const suggestion =
+              sessions.length && meta ? suggestNextLoad(meta, sessions, exUnit) : null;
+            const lastSets = sessions[0] ?? [];
+            const prevHints = prevHintsFor(lastSets, ex.sets.map((s) => s.setType), exUnit);
             const nextLinked = draft.exercises[exIdx + 1]?.linkedWithPrev ?? false;
             const inSuperset = ex.linkedWithPrev || nextLinked;
             return (
@@ -360,6 +404,22 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
                     </button>
                   )}
 
+                  {suggestion && (
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <span className="min-w-0 truncate font-mono text-[11px] text-ink-faint">
+                        Last {lastSessionSummary(lastSets, exUnit)}
+                      </span>
+                      <button
+                        onClick={() => applySuggestion(exIdx, suggestion, exType === "duration")}
+                        title={SUGGESTION_TITLE[suggestion.kind]}
+                        aria-label={`Apply suggested load for ${meta?.name ?? "exercise"}`}
+                        className={`shrink-0 rounded-full px-3 py-1 font-mono text-xs font-bold ${SUGGESTION_CLASS[suggestion.kind]}`}
+                      >
+                        {suggestionLabel(suggestion, exUnit)}
+                      </button>
+                    </div>
+                  )}
+
                   <div className="mb-1 flex items-center gap-2 text-[10px] font-medium uppercase tracking-wide text-ink-faint">
                     <span className="w-6 text-center">#</span>
                     <span className="w-12 text-center">Type</span>
@@ -382,6 +442,7 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
                       exerciseType={exType}
                       isBodyweight={isBodyweight}
                       restSeconds={ex.restSeconds}
+                      prev={prevHints[setIdx]}
                     />
                   ))}
 

@@ -42,9 +42,11 @@ interface Props {
   exerciseType: ExerciseType;
   isBodyweight: boolean;
   restSeconds: number | null;
+  /** Same-position set from the last session — shown as faint placeholders. */
+  prev?: { weight: number; reps: number; seconds: number } | null;
 }
 
-export function SetRow({ exIdx, setIdx, set, unit, exerciseType, isBodyweight, restSeconds }: Props) {
+export function SetRow({ exIdx, setIdx, set, unit, exerciseType, isBodyweight, restSeconds, prev }: Props) {
   const update = useStore((s) => s.updateDraftSet);
   const remove = useStore((s) => s.removeDraftSet);
   const insert = useStore((s) => s.insertDraftSet);
@@ -95,7 +97,9 @@ export function SetRow({ exIdx, setIdx, set, unit, exerciseType, isBodyweight, r
         onFocus={(e) => e.currentTarget.select()}
         onChange={(e) => update(exIdx, setIdx, { weight: parseFloat(e.target.value) || 0 })}
         className="w-full min-w-0 flex-1 rounded-md border border-line bg-surface px-2 py-2 text-center text-ink outline-none focus:border-ember"
-        placeholder={isBodyweight ? "+0" : "0"}
+        placeholder={
+          prev ? (isBodyweight ? `+${prev.weight}` : `${prev.weight}`) : isBodyweight ? "+0" : "0"
+        }
       />
 
       {exerciseType === "duration" ? (
@@ -107,7 +111,7 @@ export function SetRow({ exIdx, setIdx, set, unit, exerciseType, isBodyweight, r
           onFocus={(e) => e.currentTarget.select()}
           onChange={(e) => update(exIdx, setIdx, { seconds: parseInt(e.target.value) || 0 })}
           className="w-full min-w-0 flex-1 rounded-md border border-line bg-surface px-2 py-2 text-center text-ink outline-none focus:border-ember"
-          placeholder="0"
+          placeholder={prev?.seconds ? `${prev.seconds}` : "0"}
         />
       ) : (
         <input
@@ -118,7 +122,7 @@ export function SetRow({ exIdx, setIdx, set, unit, exerciseType, isBodyweight, r
           onFocus={(e) => e.currentTarget.select()}
           onChange={(e) => update(exIdx, setIdx, { reps: parseInt(e.target.value) || 0 })}
           className="w-full min-w-0 flex-1 rounded-md border border-line bg-surface px-2 py-2 text-center text-ink outline-none focus:border-ember"
-          placeholder="0"
+          placeholder={prev ? `${prev.reps}` : "0"}
         />
       )}
 
