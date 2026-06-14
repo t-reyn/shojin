@@ -22,8 +22,17 @@ create table if not exists profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   unit text not null default 'kg' check (unit in ('kg','lb')),
   default_rest_seconds int not null default 90,
+  display_name text,
+  goal text check (goal in ('muscle','strength','fat','consistent')),
+  days_per_week smallint check (days_per_week between 1 and 7),
+  onboarded_at timestamptz,
   created_at timestamptz not null default now()
 );
+-- Additive migrations for existing DBs (idempotent) — onboarding baseline fields:
+alter table profiles add column if not exists display_name text;
+alter table profiles add column if not exists goal text;
+alter table profiles add column if not exists days_per_week smallint;
+alter table profiles add column if not exists onboarded_at timestamptz;
 
 -- ---------------------------------------------------------------------------
 -- exercises — built-in catalog (user_id null) + user custom exercises

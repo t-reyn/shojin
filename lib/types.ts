@@ -32,10 +32,16 @@ export function toKg(weight: number, unit: Unit | undefined): number {
   return unit === "lb" ? weight * KG_PER_LB : weight;
 }
 
+export type Goal = "muscle" | "strength" | "fat" | "consistent";
+
 export interface Profile {
   id: string;
   unit: Unit;
   default_rest_seconds: number;
+  display_name: string | null;
+  goal: Goal | null;
+  days_per_week: number | null;
+  onboarded_at: string | null;
 }
 
 export interface Exercise {

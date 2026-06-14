@@ -82,7 +82,8 @@ export function AppShell({ userEmail }: { userEmail: string }) {
   const [showLogger, setShowLogger] = useState(false);
 
   useEffect(() => {
-    hydrate().catch((e) => setError(e.message ?? String(e)));
+    // AppGate hydrates before mounting AppShell; only re-hydrate if it hasn't.
+    if (!useStore.getState().loaded) hydrate().catch((e) => setError(e.message ?? String(e)));
   }, [hydrate]);
 
   function openLogger() {

@@ -19,11 +19,14 @@ async function uid(): Promise<string> {
 }
 
 // --- Profile ---------------------------------------------------------------
+const PROFILE_COLS =
+  "id, unit, default_rest_seconds, display_name, goal, days_per_week, onboarded_at";
+
 export async function getProfile(): Promise<Profile> {
   const id = await uid();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, unit, default_rest_seconds")
+    .select(PROFILE_COLS)
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -32,14 +35,19 @@ export async function getProfile(): Promise<Profile> {
   const { data: created, error: e2 } = await supabase
     .from("profiles")
     .insert({ id })
-    .select("id, unit, default_rest_seconds")
+    .select(PROFILE_COLS)
     .single();
   if (e2) throw e2;
   return created as Profile;
 }
 
 export async function updateProfile(
-  patch: Partial<Pick<Profile, "unit" | "default_rest_seconds">>,
+  patch: Partial<
+    Pick<
+      Profile,
+      "unit" | "default_rest_seconds" | "display_name" | "goal" | "days_per_week" | "onboarded_at"
+    >
+  >,
 ): Promise<void> {
   const id = await uid();
   const { error } = await supabase.from("profiles").update(patch).eq("id", id);

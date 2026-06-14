@@ -30,10 +30,6 @@ function nameFromEmail(email: string): string {
   const first = local.split(/[._-]/)[0] || local;
   return first ? first.charAt(0).toUpperCase() + first.slice(1) : "there";
 }
-function initials(email: string): string {
-  const n = nameFromEmail(email);
-  return n.slice(0, 2).toUpperCase();
-}
 function fmtK(v: number): string {
   if (v >= 1000) return `${(v / 1000).toFixed(1)}`;
   return `${Math.round(v)}`;
@@ -55,6 +51,8 @@ export function Dashboard({
   const profile = useStore((s) => s.profile);
   const draft = useStore((s) => s.draft);
   const unit = profile?.unit ?? "kg";
+  const displayName = profile?.display_name?.trim() || nameFromEmail(userEmail);
+  const avatarInitials = displayName.slice(0, 2).toUpperCase();
 
   const view = useMemo(() => {
     const now = new Date();
@@ -148,13 +146,13 @@ export function Dashboard({
           aria-label="Open profile"
           className="flex h-10 w-10 items-center justify-center rounded-full bg-green text-sm font-extrabold text-on-green transition-transform active:scale-95"
         >
-          {initials(userEmail)}
+          {avatarInitials}
         </button>
       </div>
       <div>
         <Eyebrow style={{ marginBottom: 7 }}>{view.dateLabel}</Eyebrow>
         <h1 className="text-[30px] font-extrabold leading-none tracking-[-0.025em] whitespace-nowrap">
-          {view.greeting}, {nameFromEmail(userEmail)}
+          {view.greeting}, {displayName}
         </h1>
       </div>
     </div>

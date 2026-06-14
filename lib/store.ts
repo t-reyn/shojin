@@ -85,6 +85,7 @@ interface StoreState {
   rest: RestState;
 
   hydrate: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
   refreshWorkouts: () => Promise<void>;
   refreshTemplates: () => Promise<void>;
   refreshBodyweight: () => Promise<void>;
@@ -213,6 +214,7 @@ export const useStore = create<StoreState>((set, get) => ({
     });
   },
 
+  refreshProfile: async () => set({ profile: await db.getProfile() }),
   refreshWorkouts: async () => set({ workouts: await db.listWorkouts() }),
   refreshTemplates: async () => set({ templates: await db.listTemplates() }),
   refreshBodyweight: async () => set({ bodyweight: await db.listBodyweight() }),

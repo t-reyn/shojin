@@ -27,10 +27,18 @@ import {
   ALL_MOVEMENT_PATTERNS,
   ALL_MUSCLE_GROUPS,
   type ExerciseType,
+  type Goal,
   type MuscleGroup,
   type MovementPattern,
   type Unit,
 } from "@/lib/types";
+
+const GOAL_OPTIONS: { id: Goal; label: string }[] = [
+  { id: "muscle", label: "Build muscle" },
+  { id: "strength", label: "Get stronger" },
+  { id: "fat", label: "Lose fat" },
+  { id: "consistent", label: "Stay consistent" },
+];
 
 export function Tools({ userEmail }: { userEmail: string }) {
   const theme = useThemePref();
@@ -45,6 +53,10 @@ export function Tools({ userEmail }: { userEmail: string }) {
 
   const unit = profile?.unit ?? "kg";
   const rest = profile?.default_rest_seconds ?? 90;
+  const goal = profile?.goal ?? null;
+  const days = profile?.days_per_week ?? null;
+
+  const [nameInput, setNameInput] = useState(profile?.display_name ?? "");
 
   const [weight, setWeight] = useState(100);
   const [reps, setReps] = useState(5);
@@ -166,6 +178,23 @@ export function Tools({ userEmail }: { userEmail: string }) {
     }));
   }
 
+  async function saveName() {
+    const next = nameInput.trim() || null;
+    if (next === (profile?.display_name ?? null)) return;
+    await updateProfile({ display_name: next });
+    useStore.setState((s) => ({ profile: s.profile ? { ...s.profile, display_name: next } : s.profile }));
+  }
+
+  async function setGoal(g: Goal | null) {
+    await updateProfile({ goal: g });
+    useStore.setState((s) => ({ profile: s.profile ? { ...s.profile, goal: g } : s.profile }));
+  }
+
+  async function setDays(d: number | null) {
+    await updateProfile({ days_per_week: d });
+    useStore.setState((s) => ({ profile: s.profile ? { ...s.profile, days_per_week: d } : s.profile }));
+  }
+
   function showInstallGuide() {
     if (isStandalone()) {
       toast.success("Shojin is already installed on this device.");
@@ -201,7 +230,8 @@ export function Tools({ userEmail }: { userEmail: string }) {
     }
   }
 
-  const initials = (userEmail.split("@")[0] || "U").slice(0, 2).toUpperCase();
+  const displayName = profile?.display_name?.trim() || "";
+  const initials = (displayName || userEmail.split("@")[0] || "U").slice(0, 2).toUpperCase();
 
   return (
     <div className="flex flex-col gap-4">
@@ -211,10 +241,64 @@ export function Tools({ userEmail }: { userEmail: string }) {
           {initials}
         </div>
         <div className="min-w-0">
-          <h1 className="text-[26px] font-extrabold leading-none tracking-[-0.025em]">Profile</h1>
+          <h1 className="text-[26px] font-extrabold leading-none tracking-[-0.025em]">
+            {displayName || "Profile"}
+          </h1>
           <div className="mt-1 truncate font-mono text-xs text-ink-faint">{userEmail}</div>
         </div>
       </div>
+
+      {/* You — baseline collected at onboarding, editable here */}
+      <section className="rounded-[28px] border border-line-2 bg-surface p-4 shadow-[var(--rp-shadow-sm)]">
+        <h3 className="mb-3 font-medium">You</h3>
+        <div className="flex items-center justify-between gap-3 py-1">
+          <span className="shrink-0 text-ink-soft">Name</span>
+          <input
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            onBlur={saveName}
+            placeholder="Your name"
+            maxLength={40}
+            className="min-w-0 flex-1 rounded-lg border border-line bg-night px-3 py-1.5 text-right text-ink outline-none focus:border-ember"
+          />
+        </div>
+        <div className="flex items-center justify-between gap-2 py-2">
+          <span className="shrink-0 text-ink-soft">Goal</span>
+          <div className="flex flex-wrap justify-end gap-1.5">
+            {GOAL_OPTIONS.map((g) => (
+              <button
+                key={g.id}
+                onClick={() => setGoal(goal === g.id ? null : g.id)}
+                aria-pressed={goal === g.id}
+                className={[
+                  "rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+                  goal === g.id ? "bg-ink text-bg" : "border border-line text-ink-soft hover:text-ink",
+                ].join(" ")}
+              >
+                {g.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-2 py-2">
+          <span className="shrink-0 text-ink-soft">Days / week</span>
+          <div className="flex gap-1 rounded-lg border border-line p-1">
+            {[1, 2, 3, 4, 5, 6, 7].map((d) => (
+              <button
+                key={d}
+                onClick={() => setDays(days === d ? null : d)}
+                aria-pressed={days === d}
+                className={[
+                  "h-7 w-7 rounded-md font-mono text-sm",
+                  days === d ? "bg-ember text-on-accent" : "text-ink-soft hover:text-ink",
+                ].join(" ")}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Appearance */}
       <section className="rounded-[28px] border border-line-2 bg-surface p-4 shadow-[var(--rp-shadow-sm)]">
