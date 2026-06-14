@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { createCustomExercise } from "@/lib/db";
 import {
@@ -21,6 +21,24 @@ const PATTERNS: MovementPattern[] = [
   "horizontal_pull", "vertical_pull", "curl", "triceps_extension", "core", "calf", "other",
 ];
 
+// Track the visual viewport so the overlay shrinks above the on-screen
+// keyboard instead of being overlaid by it (iOS keeps `fixed` full-height).
+function useViewportHeight() {
+  const [height, setHeight] = useState<number | null>(() =>
+    typeof window !== "undefined" && window.visualViewport
+      ? window.visualViewport.height
+      : null,
+  );
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const onResize = () => setHeight(vv.height);
+    vv.addEventListener("resize", onResize);
+    return () => vv.removeEventListener("resize", onResize);
+  }, []);
+  return height;
+}
+
 function SearchGlyph() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="shrink-0 text-ink-faint">
@@ -39,6 +57,7 @@ export function ExercisePicker({
 }) {
   const exercises = useStore((s) => s.exercises);
   const refreshExercises = useStore((s) => s.refreshExercises);
+  const viewportHeight = useViewportHeight();
   const [q, setQ] = useState("");
   const [creating, setCreating] = useState(false);
 
@@ -77,7 +96,10 @@ export function ExercisePicker({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-night">
+    <div
+      className="fixed inset-x-0 top-0 z-50 flex flex-col bg-night"
+      style={{ height: viewportHeight != null ? `${viewportHeight}px` : "100dvh" }}
+    >
       {/* Search header — fixed, non-scrolling */}
       <div className="flex shrink-0 items-center gap-3 px-[18px] pb-3 pt-safe">
         <div className="flex h-12 flex-1 items-center gap-[11px] rounded-2xl border-[1.5px] border-amber bg-surface px-4">

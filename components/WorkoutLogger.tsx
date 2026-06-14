@@ -156,11 +156,24 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
   const [saving, setSaving] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const scrollRef = useRef<HTMLDivElement>(null);
+  const footerRef = useRef<HTMLDivElement>(null);
+  const [footerH, setFooterH] = useState(0);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Measure the sticky footer (log button or rest dock) so the scroll content
+  // is padded by its real height — the dock + safe-area inset varies per device,
+  // so a fixed pad value leaves the last card hidden behind it.
+  useEffect(() => {
+    const el = footerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setFooterH(el.offsetHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [keypad, restActive]);
 
   const unit = profile?.unit ?? "kg";
 
@@ -504,10 +517,8 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
       {/* Exercise list */}
       <div ref={scrollRef} className="relative flex-1 overflow-y-auto">
         <div
-          className={[
-            "mx-auto flex max-w-3xl flex-col gap-2 px-4 pt-1",
-            keypad ? "pb-[460px]" : restActive ? "pb-44" : "pb-32",
-          ].join(" ")}
+          className="mx-auto flex max-w-3xl flex-col gap-2 px-4 pt-1"
+          style={{ paddingBottom: keypad ? 460 : footerH + 20 }}
         >
           {views.map((v, exIdx) => {
             const { ex, meta } = v;
@@ -664,6 +675,7 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
       {/* Sticky footer: log action / rest dock (keypad overlays both) */}
       {!keypad && (
         <div
+          ref={footerRef}
           className={[
             "fixed inset-x-0 bottom-0 mx-auto w-full max-w-3xl px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-3",
             restActive ? "" : "border-t border-line-2",
