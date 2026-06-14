@@ -20,6 +20,21 @@ const REST_MIN = 30;
 const REST_MAX = 300;
 const REST_STEP = 15;
 
+export const OPEN_IMPORT_FLAG = "shojin-open-import";
+
+type Source = "strong" | "hevy" | "other" | "fresh";
+const SOURCES: { id: Source; label: string; icon: IconName }[] = [
+  { id: "strong", label: "Strong", icon: "dumbbell" },
+  { id: "hevy", label: "Hevy", icon: "dumbbell" },
+  { id: "other", label: "Another app", icon: "filter" },
+  { id: "fresh", label: "Starting fresh", icon: "flame" },
+];
+const IMPORT_HINTS: Record<"strong" | "hevy" | "other", string> = {
+  strong: "In Strong: Profile → Settings → Export Data (CSV). We’ll open the importer next.",
+  hevy: "In Hevy: Settings → Export & Backup → Export Workouts (CSV). We’ll open the importer next.",
+  other: "Export your history as CSV from your current app — we’ll open the importer next. It reads Strong, Hevy, and most CSVs.",
+};
+
 function fmtRest(s: number): string {
   const m = Math.floor(s / 60);
   const sec = s % 60;
@@ -30,11 +45,11 @@ const labelCls = "mb-2 ml-1 font-mono text-[10.5px] uppercase tracking-[0.12em] 
 const fieldCls =
   "flex h-14 items-center gap-2.5 rounded-2xl border-[1.5px] border-line bg-surface px-4 focus-within:border-green-ink";
 
-/** 3-dot progress for the data steps (Basics · Where · Aim). */
-function Dots({ active }: { active: number }) {
+/** Progress dots for the data steps (Basics · Where · Aim · History). */
+function Dots({ active, count }: { active: number; count: number }) {
   return (
     <div className="flex items-center gap-1.5" aria-hidden="true">
-      {[0, 1, 2].map((i) => (
+      {Array.from({ length: count }, (_, i) => i).map((i) => (
         <span
           key={i}
           className="h-[5px] rounded-full transition-all duration-200 motion-reduce:transition-none"
@@ -61,6 +76,7 @@ function Head({ title, sub }: { title: string; sub: string }) {
  *  scrollable content, and a pinned amber CTA. */
 function WizardFrame({
   active,
+  count = 4,
   canSkip,
   onSkip,
   onBack,
@@ -71,6 +87,7 @@ function WizardFrame({
   children,
 }: {
   active: number;
+  count?: number;
   canSkip?: boolean;
   onSkip?: () => void;
   onBack?: () => void;
@@ -93,7 +110,7 @@ function WizardFrame({
               <Icon name="chevron" size={20} style={{ transform: "rotate(180deg)" }} />
             </button>
           )}
-          <Dots active={active} />
+          <Dots active={active} count={count} />
         </div>
         {canSkip ? (
           <button
@@ -259,12 +276,13 @@ export function Onboarding() {
   const [rest, setRest] = useState(profile?.default_rest_seconds ?? 90);
   const [goal, setGoal] = useState<Goal | null>(profile?.goal ?? null);
   const [days, setDays] = useState(profile?.days_per_week ?? 4);
+  const [source, setSource] = useState<Source | null>(null);
   const [saving, setSaving] = useState(false);
 
   const back = () => setStep((s) => Math.max(0, s - 1));
-  const next = () => setStep((s) => Math.min(3, s + 1));
+  const next = () => setStep((s) => Math.min(4, s + 1));
 
-  async function finish() {
+  async function finish(openImport = false) {
     if (saving) return;
     setSaving(true);
     try {
@@ -283,6 +301,12 @@ export function Onboarding() {
       if (Number.isFinite(bwNum) && bwNum > 0) {
         await upsertBodyweight(bwNum, unit);
         await refreshBodyweight();
+      }
+      // Land on Profile → Data so they can import (set before the gate flips).
+      if (openImport) {
+        try {
+          localStorage.setItem(OPEN_IMPORT_FLAG, "1");
+        } catch {}
       }
       // Flips profile.onboarded_at → the gate falls through to AppShell.
       await refreshProfile();
@@ -339,7 +363,7 @@ export function Onboarding() {
               </button>
               {returning ? (
                 <button
-                  onClick={finish}
+                  onClick={() => finish(false)}
                   disabled={saving}
                   className="font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-faint disabled:opacity-50"
                 >
@@ -437,12 +461,11 @@ export function Onboarding() {
           <WizardFrame
             active={2}
             canSkip
-            onSkip={finish}
+            onSkip={next}
             onBack={back}
-            cta={saving ? "Finishing…" : "Finish setup"}
-            ctaIcon="check"
-            onCta={finish}
-            ctaDisabled={saving}
+            cta="Continue"
+            ctaIcon="chevron"
+            onCta={next}
           >
             <Head title="Your aim" sub="Optional — shapes a couple of gentle nudges." />
             <div className="flex flex-col gap-6">
@@ -455,6 +478,68 @@ export function Onboarding() {
                 <DaysPicker value={days} onChange={setDays} />
               </div>
             </div>
+          </WizardFrame>
+        )}
+
+        {/* 4 · Bring your history */}
+        {step === 4 && (
+          <WizardFrame
+            active={3}
+            canSkip
+            onSkip={() => finish(false)}
+            onBack={back}
+            cta={
+              source && source !== "fresh"
+                ? saving
+                  ? "Importing…"
+                  : "Finish & import"
+                : saving
+                  ? "Finishing…"
+                  : "Finish setup"
+            }
+            ctaIcon="check"
+            onCta={() => finish(!!source && source !== "fresh")}
+            ctaDisabled={saving}
+          >
+            <Head
+              title="Bring your history"
+              sub="Switching from another app? Import your past workouts."
+            />
+            <div className="grid grid-cols-2 gap-2.5">
+              {SOURCES.map((s) => {
+                const on = source === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => setSource(on ? null : s.id)}
+                    aria-pressed={on}
+                    className={[
+                      "flex items-center gap-2.5 rounded-[18px] p-3.5 text-left text-[14.5px] font-semibold transition-colors motion-reduce:transition-none",
+                      on
+                        ? "bg-green text-on-green"
+                        : "border border-line bg-surface text-ink shadow-[var(--rp-shadow-sm)]",
+                    ].join(" ")}
+                  >
+                    <Icon
+                      name={s.icon}
+                      size={19}
+                      color={on ? "var(--color-amber)" : "var(--color-ink-faint)"}
+                    />
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+            {source && source !== "fresh" && (
+              <p className="mt-4 rounded-2xl border border-line bg-surface-2 p-3.5 text-[13px] leading-[1.45] text-ink-soft">
+                {IMPORT_HINTS[source]}
+              </p>
+            )}
+            {source === "fresh" && (
+              <p className="mt-4 ml-1 font-mono text-[11px] text-ink-faint">
+                No problem — you can always import later from Profile → Data.
+              </p>
+            )}
           </WizardFrame>
         )}
       </div>

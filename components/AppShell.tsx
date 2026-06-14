@@ -14,6 +14,8 @@ import { Toaster } from "./Toaster";
 import { DialogHost } from "./DialogHost";
 import { UpdateBanner } from "./UpdateBanner";
 import { InstallPrompt } from "./InstallPrompt";
+import { OPEN_IMPORT_FLAG } from "./Onboarding";
+import { toast } from "@/lib/toast";
 
 type TabId = "home" | "history" | "progress" | "profile";
 
@@ -73,7 +75,15 @@ const TABS: TabDef<TabId>[] = [
 ];
 
 export function AppShell({ userEmail }: { userEmail: string }) {
-  const [active, setActive] = useState<TabId>("home");
+  // Onboarding can request the importer: open straight to Profile if flagged.
+  const [active, setActive] = useState<TabId>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        if (localStorage.getItem(OPEN_IMPORT_FLAG) === "1") return "profile";
+      } catch {}
+    }
+    return "home";
+  });
   const loaded = useStore((s) => s.loaded);
   const hydrate = useStore((s) => s.hydrate);
   const draft = useStore((s) => s.draft);
@@ -85,6 +95,17 @@ export function AppShell({ userEmail }: { userEmail: string }) {
     // AppGate hydrates before mounting AppShell; only re-hydrate if it hasn't.
     if (!useStore.getState().loaded) hydrate().catch((e) => setError(e.message ?? String(e)));
   }, [hydrate]);
+
+  useEffect(() => {
+    let flagged = false;
+    try {
+      flagged = localStorage.getItem(OPEN_IMPORT_FLAG) === "1";
+      if (flagged) localStorage.removeItem(OPEN_IMPORT_FLAG);
+    } catch {}
+    if (flagged) {
+      toast.show("Import your history from the Data section below.", { duration: 6000 });
+    }
+  }, []);
 
   function openLogger() {
     setShowLogger(true);

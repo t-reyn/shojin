@@ -720,6 +720,7 @@ const FORMAT_LABEL: Record<ParseResult["format"], string> = {
   hevy: "Hevy",
   strong: "Strong",
   shojin: "Shojin",
+  generic: "generic CSV",
 };
 
 function ImportWorkouts() {
@@ -786,7 +787,7 @@ function ImportWorkouts() {
         Import workouts from CSV
       </button>
       <p className="mt-2 px-1 text-center text-[11px] text-ink-faint">
-        From Strong, Hevy, or a Shojin export.
+        From Strong, Hevy, a Shojin export, or another CSV.
       </p>
       <input
         ref={fileRef}
