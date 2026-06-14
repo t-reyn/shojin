@@ -685,44 +685,45 @@ export function WorkoutLogger({ onClose }: { onClose: () => void }) {
             backdropFilter: "blur(16px)",
           }}
         >
-          {restActive ? (
-            <RestDock nextHint={activeSummary ? `NEXT · SET ${activeSummary.n} — ${activeSummary.what}` : null} />
-          ) : (
-            <div className="flex items-center gap-2.5">
-              {activeSummary && activeSet ? (
-                <button
-                  onClick={() => commitSet(activeSet.exIdx, activeSet.setIdx, false)}
-                  className="flex h-[50px] flex-1 items-center justify-center gap-2 rounded-full bg-amber text-[15.5px] font-bold text-on-amber"
-                >
-                  <Icon name="check" size={17} color="currentColor" sw={2.6} />
-                  Log set {activeSummary.n} — {activeSummary.what}
-                </button>
-              ) : nextIncompleteIdx >= 0 ? (
-                <button
-                  onClick={() => expandExercise(nextIncompleteIdx)}
-                  className="flex h-[50px] flex-1 items-center justify-center gap-2 rounded-full bg-green text-[15.5px] font-bold text-on-green"
-                >
-                  Next: {views[nextIncompleteIdx].meta?.name ?? "exercise"}
-                  <Icon name="chevron" size={16} color="currentColor" />
-                </button>
-              ) : (
-                <button
-                  onClick={onFinish}
-                  disabled={saving}
-                  className="flex h-[50px] flex-1 items-center justify-center gap-2 rounded-full bg-green text-[15.5px] font-bold text-on-green disabled:opacity-60"
-                >
-                  {saving ? "Saving…" : draft.workoutId ? `Save changes (${completedSets} sets)` : `Finish (${completedSets} sets)`}
-                </button>
-              )}
-              <button
-                onClick={() => setActionsOpen(true)}
-                aria-label="Workout actions"
-                className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink-soft"
-              >
-                <Icon name="dots" size={18} color="currentColor" />
-              </button>
+          {restActive && (
+            <div className="mb-2.5">
+              <RestDock nextHint={activeSummary ? `NEXT · SET ${activeSummary.n} — ${activeSummary.what}` : null} />
             </div>
           )}
+          <div className="flex items-center gap-2.5">
+            {activeSummary && activeSet ? (
+              <button
+                onClick={() => commitSet(activeSet.exIdx, activeSet.setIdx, false)}
+                className="flex h-[50px] flex-1 items-center justify-center gap-2 rounded-full bg-amber text-[15.5px] font-bold text-on-amber"
+              >
+                <Icon name="check" size={17} color="currentColor" sw={2.6} />
+                Log set {activeSummary.n} — {activeSummary.what}
+              </button>
+            ) : nextIncompleteIdx >= 0 ? (
+              <button
+                onClick={() => expandExercise(nextIncompleteIdx)}
+                className="flex h-[50px] flex-1 items-center justify-center gap-2 rounded-full bg-green text-[15.5px] font-bold text-on-green"
+              >
+                Next: {views[nextIncompleteIdx].meta?.name ?? "exercise"}
+                <Icon name="chevron" size={16} color="currentColor" />
+              </button>
+            ) : (
+              <button
+                onClick={onFinish}
+                disabled={saving}
+                className="flex h-[50px] flex-1 items-center justify-center gap-2 rounded-full bg-green text-[15.5px] font-bold text-on-green disabled:opacity-60"
+              >
+                {saving ? "Saving…" : draft.workoutId ? `Save changes (${completedSets} sets)` : `Finish (${completedSets} sets)`}
+              </button>
+            )}
+            <button
+              onClick={() => setActionsOpen(true)}
+              aria-label="Workout actions"
+              className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink-soft"
+            >
+              <Icon name="dots" size={18} color="currentColor" />
+            </button>
+          </div>
         </div>
       )}
 
